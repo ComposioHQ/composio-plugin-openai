@@ -1,0 +1,20 @@
+{
+  "name": "composio",
+  "interface": {
+    "displayName": "Composio Plugins"
+  },
+  "plugins": [
+    {
+      "name": "composio",
+      "source": {
+        "source": "local",
+        "path": "./plugins/composio"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_USE"
+      },
+      "category": "Productivity"
+    }
+  ]
+}
