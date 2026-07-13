@@ -1,7 +1,7 @@
 {
   "name": "composio",
   "version": "0.1.1",
-  "description": "Use Composio from Codex through authenticated CLI workflows across 1,000+ apps.",
+  "description": "Activate authenticated Composio CLI workflows across 1,000+ apps in Codex.",
   "author": {
     "name": "Composio",
     "email": "tech@composio.dev",
@@ -18,11 +18,10 @@
     "automation",
     "productivity"
   ],
-  "skills": "./skills/",
   "interface": {
     "displayName": "Composio",
     "shortDescription": "Work across 1,000+ apps",
-    "longDescription": "Discover, connect, and use tools across 1,000+ apps from Codex through the authenticated Composio CLI. Search for the right tool, connect accounts with managed OAuth, execute actions, and script cross-app workflows.",
+    "longDescription": "A thin Codex integration for the authenticated Composio CLI. Session and prompt hooks surface Composio when app work is relevant; the CLI-installed skill provides the full search, connection, execution, and scripting workflow.",
     "developerName": "Composio",
     "category": "Productivity",
     "capabilities": [

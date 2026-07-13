@@ -16,11 +16,12 @@ Composio handles OAuth, permissions, tool discovery, and execution. Codex finds 
 
 ## Install
 
-Install the Composio CLI and sign in:
+Install the Composio CLI, sign in, and install its canonical skill for Codex:
 
 ```bash
 curl -fsSL https://composio.dev/install | bash
 composio login
+composio --install-skill composio-cli codex
 ```
 
 Add this marketplace and install the plugin:
@@ -30,22 +31,29 @@ codex plugin marketplace add ComposioHQ/composio-plugin-openai
 codex plugin add composio@composio
 ```
 
-Start a new Codex task after installation so the bundled skill is loaded.
+Start a new Codex task, open `/hooks`, and review and trust the two Composio hooks. Codex skips plugin hooks until their current definitions are trusted.
 
 To test a local checkout instead, run `codex plugin marketplace add .` from the repository root before installing the plugin.
 
+## What's included
+
+This is a thin, CLI-based plugin. It does not bundle the full CLI skill or configure an MCP server.
+
+| Component | Purpose |
+|---|---|
+| `hooks/session-start.sh` | Adds the Composio workflow and current auth status to session context, then warms a top-50 toolkit cache. |
+| `hooks/user-prompt-submit.sh` | Nudges Codex toward `composio search` when a prompt names a toolkit from that cache. |
+
 ## How it works
 
-This is a CLI-only plugin. It bundles a `composio-cli` skill aligned with stable Composio CLI 0.2.31 and does not run background hooks or configure an MCP server.
-
-When a task involves an external app, Codex:
-
-1. Uses `composio execute <slug>` when the tool is already known.
-2. Uses `composio search "<task>"` when it needs to discover the tool.
-3. Runs `composio link <app>` if the required account is not connected.
-4. Uses `composio run` for control flow, parallel work, or multi-step scripts.
+1. `SessionStart` tells Codex that Composio is available, reports whether the CLI is signed in, and warms the toolkit cache.
+2. `UserPromptSubmit` stays silent unless the prompt names a cached toolkit, then adds a one-line search-and-execute nudge.
+3. The CLI-installed `composio-cli` skill supplies the detailed commands and troubleshooting workflow.
+4. The authenticated CLI performs search, account linking, tool execution, and scripting.
 
 Authentication stays in the Composio CLI. The plugin does not require `COMPOSIO_API_KEY` in your shell profile or duplicate credentials in Codex.
+
+The hooks are bounded lifecycle commands. They do not start a persistent watcher or background service.
 
 Hosted ChatGPT and Codex app support is intentionally out of scope for this release and can be added separately with an approved app binding.
 
