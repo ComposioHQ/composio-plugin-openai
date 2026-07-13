@@ -31,7 +31,7 @@ done <"$CACHE"
 
 [ "$matched" -eq 1 ] || exit 0
 
-line="You mentioned an app Composio can act on. Resolve the tool just-in-time: \`composio search \"<task>\"\` then \`composio execute\` (managed auth)."
+line="You mentioned an app Composio can act on. Run \`composio execute <slug>\` directly when the tool slug is known. Otherwise, resolve it with \`composio search \"<task>\"\`, then execute the result (managed auth)."
 
 if command -v jq >/dev/null 2>&1; then
   jq -n --arg c "$line" \
