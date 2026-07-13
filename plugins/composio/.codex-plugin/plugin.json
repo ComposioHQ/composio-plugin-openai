@@ -1,6 +1,6 @@
 {
   "name": "composio",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Your agent decides what to do — Composio handles the rest. Just-in-time tool calls across 1,000+ apps (Slack, GitHub, Gmail, Notion, Linear…) with fully managed auth, driven by the Composio CLI.",
   "author": {
     "name": "Composio",
@@ -18,6 +18,7 @@
     "automation",
     "productivity"
   ],
+  "skills": "./skills/",
   "interface": {
     "displayName": "Composio",
     "shortDescription": "Work across 1,000+ apps",

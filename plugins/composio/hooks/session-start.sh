@@ -37,7 +37,7 @@ fi
 
 [ -n "$cache_pid" ] && wait "$cache_pid" 2>/dev/null
 
-line="Composio is available in this session. For any task involving an external app or service (email, calendar, GitHub, Slack, CRMs, docs — 1,000+ apps), resolve the tool just-in-time with \`composio search \"<task>\"\`, then run it with \`composio execute\`. Auth is fully managed. ${auth} Run \`composio --help\` for full usage; install detailed Codex guidance with \`composio --install-skill composio-cli codex\`."
+line="Composio is available in this session. For any task involving an external app or service (email, calendar, GitHub, Slack, CRMs, docs — 1,000+ apps), resolve the tool just-in-time with \`composio search \"<task>\"\`, then run it with \`composio execute\`. Auth is fully managed. ${auth} Run \`composio --help\` for full usage."
 
 if command -v jq >/dev/null 2>&1; then
   jq -n --arg c "$line" \

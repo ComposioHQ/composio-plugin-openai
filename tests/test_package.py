@@ -11,6 +11,9 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins" / "composio"
 HOOKS = PLUGIN / "hooks"
+SKILL = PLUGIN / "skills" / "composio-cli"
+LISTING = ROOT / "submission" / "listing.json"
+TEST_CASES = ROOT / "submission" / "test-cases.json"
 
 
 class PluginPackageTests(unittest.TestCase):
@@ -29,7 +32,7 @@ class PluginPackageTests(unittest.TestCase):
         self.assertRegex(manifest["version"], r"^\d+\.\d+\.\d+$")
         self.assertNotIn("[TODO:", json.dumps(manifest))
         self.assertNotIn("ChatGPT", json.dumps(manifest))
-        self.assertNotIn("skills", manifest)
+        self.assertEqual("./skills/", manifest["skills"])
 
         interface = manifest["interface"]
         for field in ("composerIcon", "logo"):
@@ -37,15 +40,15 @@ class PluginPackageTests(unittest.TestCase):
             self.assertTrue(asset.is_file(), asset)
             self.assertEqual(".png", asset.suffix)
 
-    def test_package_is_cli_only(self):
+    def test_package_is_skills_only(self):
         manifest = self.load_json(PLUGIN / ".codex-plugin" / "plugin.json")
         self.assertNotIn("mcpServers", manifest)
         self.assertNotIn("apps", manifest)
         self.assertFalse((PLUGIN / ".mcp.json").exists())
         self.assertFalse((PLUGIN / ".app.json").exists())
         self.assertFalse((ROOT / "docs" / "app-wiring.md").exists())
-        self.assertFalse((ROOT / "submission" / "test-cases.json").exists())
-        self.assertFalse((PLUGIN / "skills").exists())
+        self.assertTrue(TEST_CASES.is_file())
+        self.assertTrue(SKILL.is_dir())
 
         package_text = "\n".join(
             path.read_text(encoding="utf-8")
@@ -56,7 +59,39 @@ class PluginPackageTests(unittest.TestCase):
         self.assertNotIn("env_http_headers", package_text)
         self.assertNotIn("COMPOSIO_SEARCH_TOOLS", package_text)
 
-    def test_hooks_match_the_thin_plugin_contract(self):
+    def test_bundled_skill_is_complete_and_stable(self):
+        skill_text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("name: composio-cli", skill_text)
+        self.assertIn("release-channel: stable", skill_text)
+        self.assertIn("AUTO-GENERATED", skill_text)
+        self.assertTrue((SKILL / "agents" / "openai.yaml").is_file())
+        self.assertEqual(
+            {"composio-dev.md", "power-user-examples.md", "troubleshooting.md"},
+            {path.name for path in (SKILL / "references").glob("*.md")},
+        )
+
+    def test_submission_materials_are_complete(self):
+        listing = self.load_json(LISTING)
+        self.assertEqual("Composio CLI", listing["name"])
+        self.assertEqual("https://composio.dev/support", listing["supportUrl"])
+        self.assertEqual(["US"], listing["availability"])
+        self.assertEqual(3, len(listing["starterPrompts"]))
+        self.assertNotIn("MCP", listing["longDescription"])
+
+        cases = self.load_json(TEST_CASES)
+        self.assertEqual(5, len(cases["positive"]))
+        self.assertEqual(3, len(cases["negative"]))
+        for case in cases["positive"]:
+            self.assertTrue(
+                {"name", "prompt", "expectedBehavior", "expectedResultShape", "fixtures"}
+                <= set(case)
+            )
+        for case in cases["negative"]:
+            self.assertTrue(
+                {"name", "prompt", "expectedBehavior", "reason"} <= set(case)
+            )
+
+    def test_hooks_match_the_cli_plugin_contract(self):
         config = self.load_json(HOOKS / "hooks.json")["hooks"]
         self.assertEqual({"SessionStart", "UserPromptSubmit"}, set(config))
         self.assertEqual(8, config["SessionStart"][0]["hooks"][0]["timeout"])
@@ -77,7 +112,8 @@ class PluginPackageTests(unittest.TestCase):
     def test_readme_documents_released_install_flow(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("composio login", readme)
-        self.assertIn("composio --install-skill composio-cli codex", readme)
+        self.assertNotIn("composio --install-skill composio-cli codex", readme)
+        self.assertIn("bundles the canonical CLI skill", readme)
         self.assertIn("codex plugin marketplace add ComposioHQ/composio-plugin-openai", readme)
         self.assertIn("codex plugin add composio@composio", readme)
         self.assertIn("/hooks", readme)
