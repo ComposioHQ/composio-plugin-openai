@@ -1,26 +1,27 @@
 {
   "name": "composio",
-  "version": "0.1.0",
-  "description": "Use Composio from Codex today and add the connected Composio app for ChatGPT and Codex when its app binding is approved.",
+  "version": "0.1.1",
+  "description": "Your agent decides what to do — Composio handles the rest. Just-in-time tool calls across 1,000+ apps (Slack, GitHub, Gmail, Notion, Linear…) with fully managed auth, driven by the Composio CLI.",
   "author": {
     "name": "Composio",
     "email": "tech@composio.dev",
     "url": "https://composio.dev"
   },
-  "homepage": "https://docs.composio.dev/docs/composio-connect",
+  "homepage": "https://docs.composio.dev/docs/cli",
   "repository": "https://github.com/ComposioHQ/composio-plugin-openai",
   "license": "MIT",
   "keywords": [
     "composio",
+    "cli",
+    "codex",
     "integrations",
     "automation",
     "productivity"
   ],
-  "skills": "./skills/",
   "interface": {
     "displayName": "Composio",
     "shortDescription": "Work across 1,000+ apps",
-    "longDescription": "Discover, connect, and use tools across 1,000+ apps. The package ships authenticated Composio CLI workflows for local Codex and is ready to add the connected Composio app for hosted ChatGPT and Codex after OpenAI assigns its app ID.",
+    "longDescription": "Your agent decides what to do — Composio handles the rest. Discover and call tools just in time across 1,000+ apps, including Slack, GitHub, Gmail, Notion, and Linear, with fully managed auth through the Composio CLI.",
     "developerName": "Composio",
     "category": "Productivity",
     "capabilities": [
