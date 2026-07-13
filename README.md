@@ -53,10 +53,6 @@ This is a thin, CLI-based plugin. It does not bundle the full CLI skill or confi
 
 Authentication stays in the Composio CLI. The plugin does not require `COMPOSIO_API_KEY` in your shell profile or duplicate credentials in Codex.
 
-The hooks are bounded lifecycle commands. They do not start a persistent watcher or background service.
-
-Hosted ChatGPT and Codex app support is intentionally out of scope for this release and can be added separately with an approved app binding.
-
 ## Examples
 
 ```text

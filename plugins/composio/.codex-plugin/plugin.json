@@ -1,7 +1,7 @@
 {
   "name": "composio",
   "version": "0.1.1",
-  "description": "Activate authenticated Composio CLI workflows across 1,000+ apps in Codex.",
+  "description": "Your agent decides what to do — Composio handles the rest. Just-in-time tool calls across 1,000+ apps (Slack, GitHub, Gmail, Notion, Linear…) with fully managed auth, driven by the Composio CLI.",
   "author": {
     "name": "Composio",
     "email": "tech@composio.dev",
@@ -21,7 +21,7 @@
   "interface": {
     "displayName": "Composio",
     "shortDescription": "Work across 1,000+ apps",
-    "longDescription": "A thin Codex integration for the authenticated Composio CLI. Session and prompt hooks surface Composio when app work is relevant; the CLI-installed skill provides the full search, connection, execution, and scripting workflow.",
+    "longDescription": "Your agent decides what to do — Composio handles the rest. Discover and call tools just in time across 1,000+ apps, including Slack, GitHub, Gmail, Notion, and Linear, with fully managed auth through the Composio CLI.",
     "developerName": "Composio",
     "category": "Productivity",
     "capabilities": [
