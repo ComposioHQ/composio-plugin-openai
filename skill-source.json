@@ -1,0 +1,8 @@
+{
+  "repository": "ComposioHQ/composio",
+  "releaseTag": "@composio/cli@0.2.31",
+  "sourceCommit": "56534e215842cc5b3169eee720c337ae0b901bae",
+  "sourcePath": "ts/packages/cli/skills-src/composio-cli",
+  "channel": "stable",
+  "treeSha256": "8dbfdf3d8146939e3660dd678867cc9e9775a694e0406be50c321430a416a797"
+}

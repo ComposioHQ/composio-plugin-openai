@@ -1,16 +1,31 @@
+import importlib.util
+import io
 import json
 import os
 import pathlib
 import shlex
 import stat
 import subprocess
+import tarfile
 import tempfile
 import unittest
+from unittest import mock
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins" / "composio"
 HOOKS = PLUGIN / "hooks"
+SKILL = PLUGIN / "skills" / "composio-cli"
+LOCK = ROOT / "skill-source.json"
+LISTING = ROOT / "submission" / "listing.json"
+TEST_CASES = ROOT / "submission" / "test-cases.json"
+
+SYNC_SPEC = importlib.util.spec_from_file_location(
+    "sync_cli_skill", ROOT / "scripts" / "sync_cli_skill.py"
+)
+assert SYNC_SPEC and SYNC_SPEC.loader
+SYNC = importlib.util.module_from_spec(SYNC_SPEC)
+SYNC_SPEC.loader.exec_module(SYNC)
 
 
 class PluginPackageTests(unittest.TestCase):
@@ -29,7 +44,7 @@ class PluginPackageTests(unittest.TestCase):
         self.assertRegex(manifest["version"], r"^\d+\.\d+\.\d+$")
         self.assertNotIn("[TODO:", json.dumps(manifest))
         self.assertNotIn("ChatGPT", json.dumps(manifest))
-        self.assertNotIn("skills", manifest)
+        self.assertEqual("./skills/", manifest["skills"])
 
         interface = manifest["interface"]
         for field in ("composerIcon", "logo"):
@@ -37,15 +52,15 @@ class PluginPackageTests(unittest.TestCase):
             self.assertTrue(asset.is_file(), asset)
             self.assertEqual(".png", asset.suffix)
 
-    def test_package_is_cli_only(self):
+    def test_package_is_skills_only(self):
         manifest = self.load_json(PLUGIN / ".codex-plugin" / "plugin.json")
         self.assertNotIn("mcpServers", manifest)
         self.assertNotIn("apps", manifest)
         self.assertFalse((PLUGIN / ".mcp.json").exists())
         self.assertFalse((PLUGIN / ".app.json").exists())
         self.assertFalse((ROOT / "docs" / "app-wiring.md").exists())
-        self.assertFalse((ROOT / "submission" / "test-cases.json").exists())
-        self.assertFalse((PLUGIN / "skills").exists())
+        self.assertTrue(TEST_CASES.is_file())
+        self.assertTrue(SKILL.is_dir())
 
         package_text = "\n".join(
             path.read_text(encoding="utf-8")
@@ -56,7 +71,55 @@ class PluginPackageTests(unittest.TestCase):
         self.assertNotIn("env_http_headers", package_text)
         self.assertNotIn("COMPOSIO_SEARCH_TOOLS", package_text)
 
-    def test_hooks_match_the_thin_plugin_contract(self):
+    def test_bundled_skill_matches_the_pinned_stable_release(self):
+        lock = self.load_json(LOCK)
+        self.assertEqual("ComposioHQ/composio", lock["repository"])
+        self.assertEqual("@composio/cli@0.2.31", lock["releaseTag"])
+        self.assertEqual("stable", lock["channel"])
+        self.assertRegex(lock["sourceCommit"], r"^[0-9a-f]{40}$")
+        self.assertRegex(lock["treeSha256"], r"^[0-9a-f]{64}$")
+
+        skill_text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        self.assertIn("name: composio-cli", skill_text)
+        self.assertIn("release-channel: stable", skill_text)
+        self.assertIn("AUTO-GENERATED", skill_text)
+        self.assertTrue((SKILL / "agents" / "openai.yaml").is_file())
+        self.assertEqual(
+            {"composio-dev.md", "power-user-examples.md", "troubleshooting.md"},
+            {path.name for path in (SKILL / "references").glob("*.md")},
+        )
+
+        result = subprocess.run(
+            ["python3", str(ROOT / "scripts" / "sync_cli_skill.py"), "--check"],
+            capture_output=True,
+            text=True,
+            timeout=20,
+            check=False,
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+
+    def test_submission_materials_are_complete(self):
+        listing = self.load_json(LISTING)
+        self.assertEqual("Composio CLI", listing["name"])
+        self.assertEqual("https://composio.dev/support", listing["supportUrl"])
+        self.assertEqual(["US"], listing["availability"])
+        self.assertEqual(3, len(listing["starterPrompts"]))
+        self.assertNotIn("MCP", listing["longDescription"])
+
+        cases = self.load_json(TEST_CASES)
+        self.assertEqual(5, len(cases["positive"]))
+        self.assertEqual(3, len(cases["negative"]))
+        for case in cases["positive"]:
+            self.assertTrue(
+                {"name", "prompt", "expectedBehavior", "expectedResultShape", "fixtures"}
+                <= set(case)
+            )
+        for case in cases["negative"]:
+            self.assertTrue(
+                {"name", "prompt", "expectedBehavior", "reason"} <= set(case)
+            )
+
+    def test_hooks_match_the_cli_plugin_contract(self):
         config = self.load_json(HOOKS / "hooks.json")["hooks"]
         self.assertEqual({"SessionStart", "UserPromptSubmit"}, set(config))
         self.assertEqual(8, config["SessionStart"][0]["hooks"][0]["timeout"])
@@ -77,12 +140,65 @@ class PluginPackageTests(unittest.TestCase):
     def test_readme_documents_released_install_flow(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
         self.assertIn("composio login", readme)
-        self.assertIn("composio --install-skill composio-cli codex", readme)
+        self.assertNotIn("composio --install-skill composio-cli codex", readme)
+        self.assertIn("bundles the canonical CLI skill", readme)
         self.assertIn("codex plugin marketplace add ComposioHQ/composio-plugin-openai", readme)
         self.assertIn("codex plugin add composio@composio", readme)
         self.assertIn("/hooks", readme)
         self.assertNotIn("composio setup", readme)
         self.assertNotIn("/path/to/plugin-creator", readme)
+
+
+class SkillSyncTests(unittest.TestCase):
+    def archive(self, entries):
+        output = io.BytesIO()
+        with tarfile.open(fileobj=output, mode="w") as archive:
+            for name, contents in entries:
+                data = contents.encode()
+                member = tarfile.TarInfo(name)
+                member.size = len(data)
+                archive.addfile(member, io.BytesIO(data))
+        return output.getvalue()
+
+    def test_rejects_unsafe_source_archive_paths(self):
+        data = self.archive(
+            [
+                ("ts/packages/cli/scripts/build-skills.ts", "export {};\n"),
+                ("../escape", "unsafe"),
+            ]
+        )
+        with tempfile.TemporaryDirectory() as tmpdir:
+            archive_path = pathlib.Path(tmpdir) / "source.tar"
+            archive_path.write_bytes(data)
+            with self.assertRaisesRegex(RuntimeError, "Unsafe source archive path"):
+                SYNC.extract_source_archive(archive_path, pathlib.Path(tmpdir) / "output")
+
+    def test_check_rejects_tree_digest_mismatch(self):
+        with tempfile.TemporaryDirectory() as tmpdir:
+            root = pathlib.Path(tmpdir)
+            destination = root / "composio-cli"
+            destination.mkdir()
+            (destination / "SKILL.md").write_text("changed", encoding="utf-8")
+            lock_path = root / "skill-source.json"
+            lock_path.write_text(
+                json.dumps(
+                    {
+                        "repository": SYNC.REPOSITORY,
+                        "releaseTag": "@composio/cli@test",
+                        "sourcePath": SYNC.SOURCE_PATH,
+                        "sourceCommit": "0" * 40,
+                        "channel": SYNC.CHANNEL,
+                        "treeSha256": "0" * 64,
+                    }
+                ),
+                encoding="utf-8",
+            )
+            with (
+                mock.patch.object(SYNC, "DESTINATION", destination),
+                mock.patch.object(SYNC, "LOCK_PATH", lock_path),
+                self.assertRaisesRegex(RuntimeError, "checksum mismatch"),
+            ):
+                SYNC.check()
 
 
 class HookBehaviorTests(unittest.TestCase):

@@ -1,0 +1,19 @@
+{
+  "name": "Composio CLI",
+  "shortDescription": "Use the Composio CLI across 1,000+ apps",
+  "longDescription": "Use Codex with the Composio CLI to discover tools just in time, connect accounts with managed authentication, inspect schemas, execute actions, and script workflows across services such as GitHub, Gmail, Slack, Notion, and Linear.",
+  "category": "Productivity",
+  "websiteUrl": "https://composio.dev/cli",
+  "supportUrl": "https://composio.dev/support",
+  "privacyPolicyUrl": "https://composio.dev/privacy",
+  "termsOfServiceUrl": "https://composio.dev/terms",
+  "starterPrompts": [
+    "Summarize my unread email and draft replies.",
+    "Turn new GitHub issues into Linear tickets.",
+    "Find this week's meetings and post a Slack brief."
+  ],
+  "availability": [
+    "US"
+  ],
+  "releaseNotes": "Initial skills-only submission. Bundles the stable Composio CLI workflow for tool discovery, managed account linking, safe execution, and multi-app scripting without an MCP app."
+}

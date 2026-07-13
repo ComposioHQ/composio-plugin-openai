@@ -1,4 +1,4 @@
-# Composio for Codex
+# Composio CLI for Codex
 
 [![CI](https://github.com/ComposioHQ/composio-plugin-openai/actions/workflows/ci.yml/badge.svg)](https://github.com/ComposioHQ/composio-plugin-openai/actions/workflows/ci.yml)
 &nbsp;[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](./LICENSE)
@@ -16,12 +16,11 @@ Composio handles OAuth, permissions, tool discovery, and execution. Codex finds 
 
 ## Install
 
-Install the Composio CLI, sign in, and install its canonical skill for Codex:
+Install the Composio CLI and sign in:
 
 ```bash
 curl -fsSL https://composio.dev/install | bash
 composio login
-composio --install-skill composio-cli codex
 ```
 
 Add this marketplace and install the plugin:
@@ -37,18 +36,19 @@ To test a local checkout instead, run `codex plugin marketplace add .` from the 
 
 ## What's included
 
-This is a thin, CLI-based plugin. It does not bundle the full CLI skill or configure an MCP server.
+This is a CLI-based plugin. It bundles the canonical CLI skill and does not configure an MCP server.
 
 | Component | Purpose |
 |---|---|
+| `skills/composio-cli` | Guides tool discovery, account linking, schema inspection, execution, scripting, and troubleshooting. |
 | `hooks/session-start.sh` | Adds the Composio workflow and current auth status to session context, then warms a top-50 toolkit cache. |
 | `hooks/user-prompt-submit.sh` | Nudges Codex toward `composio search` when a prompt names a toolkit from that cache. |
 
 ## How it works
 
-1. `SessionStart` tells Codex that Composio is available, reports whether the CLI is signed in, and warms the toolkit cache.
-2. `UserPromptSubmit` stays silent unless the prompt names a cached toolkit, then adds a one-line search-and-execute nudge.
-3. The CLI-installed `composio-cli` skill supplies the detailed commands and troubleshooting workflow.
+1. The bundled `composio-cli` skill supplies the detailed commands and troubleshooting workflow.
+2. `SessionStart` tells Codex that Composio is available, reports whether the CLI is signed in, and warms the toolkit cache.
+3. `UserPromptSubmit` stays silent unless the prompt names a cached toolkit, then adds a one-line search-and-execute nudge.
 4. The authenticated CLI performs search, account linking, tool execution, and scripting.
 
 Authentication stays in the Composio CLI. The plugin does not require `COMPOSIO_API_KEY` in your shell profile or duplicate credentials in Codex.
@@ -73,7 +73,10 @@ Google Calendar events, then give me a concise summary.
 
 ```bash
 python3 -m unittest discover -s tests -v
+python3 scripts/sync_cli_skill.py --check
 ```
+
+The bundled skill is pinned to a stable Composio CLI release in `skill-source.json`. To update it, run `python3 scripts/sync_cli_skill.py --update <release-tag>` and commit the generated skill and lock together.
 
 ## License
 
