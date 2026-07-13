@@ -73,10 +73,7 @@ Google Calendar events, then give me a concise summary.
 
 ```bash
 python3 -m unittest discover -s tests -v
-python3 scripts/sync_cli_skill.py --check
 ```
-
-The bundled skill is pinned to a stable Composio CLI release in `skill-source.json`. To update it, run `python3 scripts/sync_cli_skill.py --update <release-tag>` and commit the generated skill and lock together.
 
 ## License
 

@@ -1,7 +1,7 @@
 {
   "name": "composio",
   "version": "0.2.0",
-  "description": "Use the Composio CLI from Codex to discover, connect, and act across 1,000+ apps with managed authentication.",
+  "description": "Your agent decides what to do \u2014 Composio handles the rest. Just-in-time tool calls across 1,000+ apps (Slack, GitHub, Gmail, Notion, Linear\u2026) with fully managed auth, driven by the Composio CLI.",
   "author": {
     "name": "Composio",
     "email": "tech@composio.dev",
@@ -13,7 +13,6 @@
   "keywords": [
     "composio",
     "cli",
-    "skills",
     "codex",
     "integrations",
     "automation",
@@ -22,8 +21,8 @@
   "skills": "./skills/",
   "interface": {
     "displayName": "Composio",
-    "shortDescription": "Use the Composio CLI across 1,000+ apps",
-    "longDescription": "Discover and call tools just in time across 1,000+ apps, including Slack, GitHub, Gmail, Notion, and Linear. The bundled Composio CLI skill guides account linking, schema inspection, safe execution, and multi-app workflows.",
+    "shortDescription": "Work across 1,000+ apps",
+    "longDescription": "Your agent decides what to do \u2014 Composio handles the rest. Discover and call tools just in time across 1,000+ apps, including Slack, GitHub, Gmail, Notion, and Linear, with fully managed auth through the Composio CLI.",
     "developerName": "Composio",
     "category": "Productivity",
     "capabilities": [
