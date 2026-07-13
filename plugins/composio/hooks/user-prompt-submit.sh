@@ -32,7 +32,7 @@ done <"$CACHE"
 
 [ "$matched" -eq 1 ] || exit 0
 
-line="You mentioned a service Composio can act on. Use callable, authorized hosted Composio app tools for direct SaaS work. The local Composio CLI is also available; choose it when local files, scripts, pipelines, or reproducible automation matter. If both surfaces fit, choose by task requirements. Never replay an uncertain write through the other surface."
+line="You mentioned a service Composio can act on. This terminal/Codex session has the local Composio CLI, so prefer it for the task. Use callable hosted Composio app tools only if the user explicitly requests them or the needed capability exists only there. Never replay an uncertain write through the other surface."
 
 if command -v jq >/dev/null 2>&1; then
   jq -n --arg c "$line" \

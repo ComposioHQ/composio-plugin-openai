@@ -1,6 +1,6 @@
 # Local Composio CLI
 
-Use this path only when a local shell and the `composio` command are available and local files, scripting, pipelines, or reproducible automation matter.
+Prefer this path in terminal and Codex environments when the `composio` command is available. It supports direct SaaS work as well as local files, scripting, pipelines, and reproducible automation.
 
 ## Workflow
 
@@ -28,5 +28,11 @@ Use this path only when a local shell and the `composio` command are available a
 6. Use `composio proxy` only when a dedicated tool does not cover the required authenticated API operation.
 
 Pass local data with `-d @file.json` or stdin, and use `--file` only for a tool with one uploadable file input. Check local auth with `composio whoami`; sign in with `composio login` when needed.
+
+## Extended workflows
+
+- Use `composio listen <trigger>` for temporary trigger subscriptions when the installed CLI exposes that feature.
+- Use `composio dev` only for explicit developer-project work such as toolkits, auth configs, connected accounts, triggers, logs, organizations, or projects.
+- Use `composio --help` and command-level `--help` for options not covered here.
 
 If a write's result is uncertain, inspect the destination or execution status before retrying. Do not replay it through the hosted app.

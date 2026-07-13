@@ -1,6 +1,6 @@
 # Hosted Composio app
 
-Use this path when hosted Composio app tools are callable in the current task. The runtime's tool descriptions and schemas are the source of truth; do not assume fixed tool names.
+Use this path in ChatGPT web/app, when no usable terminal exists, or when the user explicitly requests the hosted surface. The runtime's tool descriptions and schemas are the source of truth; do not assume fixed tool names.
 
 ## Workflow
 

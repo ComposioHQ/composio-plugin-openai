@@ -90,11 +90,13 @@ class PluginPackageTests(unittest.TestCase):
     def test_skill_encodes_the_routing_and_write_contract(self):
         skill_text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         for phrase in (
-            "callable, authorized hosted Composio app tools",
+            "In a terminal or Codex environment",
+            "prefer the local Composio CLI",
+            "In ChatGPT web/app",
             "local Composio CLI",
             "If both surfaces are available",
             "If neither surface is available",
-            "MCP-only environment",
+            "hosted-only environment",
             "execute it exactly once",
             "Never automatically retry an uncertain write through the other surface",
         ):
@@ -112,7 +114,9 @@ class PluginPackageTests(unittest.TestCase):
         self.assertIn("composio execute", cli_reference)
         self.assertIn("composio search", cli_reference)
         self.assertIn("composio link", cli_reference)
+        self.assertIn("composio listen", cli_reference)
         self.assertIn("composio run", cli_reference)
+        self.assertIn("composio dev", cli_reference)
         self.assertIn("Do not replay", cli_reference)
 
     def test_package_content_scan_is_scoped_to_shipped_files(self):
@@ -205,6 +209,7 @@ class PluginPackageTests(unittest.TestCase):
         )
         self.assertIn("hosted Composio app tools", hook_text)
         self.assertIn("local Composio CLI", hook_text)
+        self.assertIn("Prefer", hook_text)
         self.assertIn("uncertain write", hook_text)
         self.assertNotIn("run `composio execute <slug>` directly", hook_text)
 
@@ -277,11 +282,12 @@ class HookBehaviorTests(unittest.TestCase):
             context = output["additionalContext"]
             self.assertIn("hosted Composio app tools", context)
             self.assertIn("local Composio CLI is available and signed in", context)
+            self.assertIn("Prefer the local Composio CLI", context)
             self.assertIn("uncertain write", context)
             cache = pathlib.Path(tmpdir) / "composio-plugin-toolkits.cache"
             self.assertEqual({"gmail", "github"}, set(cache.read_text().splitlines()))
 
-    def test_session_start_keeps_mcp_first_when_cli_is_missing(self):
+    def test_session_start_offers_cli_install_in_terminal_context(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             empty = pathlib.Path(tmpdir) / "empty"
             empty.mkdir()
@@ -292,10 +298,10 @@ class HookBehaviorTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stderr)
             context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
             self.assertIn("hosted Composio app tools", context)
-            self.assertIn("local Composio CLI is not available", context)
-            self.assertIn("Install the CLI only", context)
+            self.assertIn("local Composio CLI is not installed", context)
+            self.assertIn("Ask before installing", context)
             self.assertLess(
-                context.index("hosted Composio app tools"), context.index("Install the CLI only")
+                context.index("Ask before installing"), context.index("hosted Composio app tools")
             )
             self.assertNotIn("composio execute", context)
             self.assertNotIn("composio search", context)
@@ -315,7 +321,7 @@ class HookBehaviorTests(unittest.TestCase):
             self.assertEqual(0, matched.returncode, matched.stderr)
             context = json.loads(matched.stdout)["hookSpecificOutput"]["additionalContext"]
             self.assertIn("hosted Composio app tools", context)
-            self.assertIn("local Composio CLI is also available", context)
+            self.assertIn("prefer it for the task", context)
             self.assertIn("uncertain write", context)
             self.assertNotIn("composio execute", context)
             self.assertNotIn("composio search", context)

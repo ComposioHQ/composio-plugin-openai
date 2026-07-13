@@ -9,12 +9,12 @@ Choose a surface from the capabilities available in the current task, then keep 
 
 ## Choose the surface
 
-1. Use callable, authorized hosted Composio app tools for direct SaaS reads and actions. Read [references/mcp.md](references/mcp.md) before using that surface.
-2. Use the local Composio CLI when a shell and `composio` are available and the task needs local files, scripts, pipelines, or reproducible automation. Read [references/cli.md](references/cli.md) before using that surface.
-3. If both surfaces are available, choose by task requirements. Do not ask the user to choose unless the difference materially changes the outcome.
-4. If neither surface is available, explain both setup paths: authorize or enable the hosted app for direct SaaS work, or install and sign in to the CLI for local automation.
+1. In a terminal or Codex environment, prefer the local Composio CLI for Composio work. If `composio` is missing, explain how to install and sign in before choosing it; do not install software without user approval. Read [references/cli.md](references/cli.md) before using that surface.
+2. In ChatGPT web/app or another environment without a usable terminal, use callable, authorized hosted Composio app tools. Read [references/mcp.md](references/mcp.md) before using that surface.
+3. If both surfaces are available in a terminal or Codex environment, use the CLI unless the user explicitly requests the hosted surface or the required capability exists only there.
+4. If neither surface is available, explain both setup paths: authorize or enable the hosted app for ChatGPT work, or install and sign in to the CLI for terminal automation.
 
-Do not tell a user in an MCP-only environment to install the CLI before using callable hosted app tools.
+Do not tell a user in ChatGPT web/app or another hosted-only environment to install the CLI before using callable hosted app tools.
 
 ## Execute safely
 

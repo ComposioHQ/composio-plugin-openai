@@ -24,7 +24,7 @@ if command -v composio >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
 fi
 
 if ! command -v composio >/dev/null 2>&1; then
-  cli_status="The local Composio CLI is not available. Use hosted Composio app tools when callable. Install the CLI only if the task needs local files, scripting, pipelines, or reproducible automation: https://composio.dev/install."
+  cli_status="The local Composio CLI is not installed. Ask before installing it from https://composio.dev/install, then run \`composio login\`. Until it is available, use hosted Composio app tools when callable."
 else
   cli_status="The local Composio CLI is available but is not signed in; run \`composio login\` before choosing it."
   if whoami_output="$(composio whoami 2>&1)" \
@@ -37,7 +37,7 @@ fi
 
 [ -n "$cache_pid" ] && wait "$cache_pid" 2>/dev/null
 
-line="Composio may be available through hosted app tools, the local CLI, or both. Use callable, authorized hosted Composio app tools for direct SaaS reads and actions. Use the local Composio CLI for local files, scripts, pipelines, or reproducible automation. If both are available, choose by task requirements without asking unless the outcome would materially change. Never automatically retry an uncertain write through the other surface. ${cli_status}"
+line="This is a terminal/Codex session. Prefer the local Composio CLI for Composio work, including direct SaaS actions and workflows involving local files, scripts, pipelines, or reproducible automation. ${cli_status} Use callable hosted Composio app tools when the CLI is unavailable, the user explicitly requests them, or the needed capability exists only there. Never automatically retry an uncertain write through the other surface."
 
 if command -v jq >/dev/null 2>&1; then
   jq -n --arg c "$line" \

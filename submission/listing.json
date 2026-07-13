@@ -1,7 +1,7 @@
 {
   "name": "Composio",
   "shortDescription": "Work safely across 1,000+ connected apps",
-  "longDescription": "Use hosted Composio app tools for direct SaaS reads and actions across services such as GitHub, Gmail, Google Calendar, Slack, Notion, and Linear. When local files, scripts, pipelines, or reproducible automation matter, the bundled skill can use the local Composio CLI instead. Composio manages authentication and tool discovery on both surfaces and prevents automatic cross-surface replay of uncertain writes.",
+  "longDescription": "Work across GitHub, Gmail, Google Calendar, Slack, Notion, Linear, and 1,000+ other apps with managed authentication and tool discovery. In ChatGPT web/app, use hosted Composio app tools. In terminal and Codex environments, the bundled skill prefers the local Composio CLI for direct SaaS work, local files, scripts, pipelines, and reproducible automation. Uncertain writes are never replayed automatically across surfaces.",
   "category": "Productivity",
   "websiteUrl": "https://composio.dev",
   "supportUrl": "https://composio.dev/support",

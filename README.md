@@ -10,6 +10,8 @@ Composio connects agents to [1,000+ apps](https://composio.dev/toolkits), includ
 
 The bundled skill chooses between them from the capabilities available in the task. An uncertain write is never retried automatically through the other surface.
 
+In terminal and Codex environments, the skill prefers the CLI. In ChatGPT web/app or another environment without a usable terminal, it uses the hosted app.
+
 ## What you can do
 
 - Read and act on connected apps without installing a local CLI when hosted app tools are available.
@@ -26,9 +28,9 @@ codex plugin marketplace add ComposioHQ/composio-plugin-openai
 codex plugin add composio@composio
 ```
 
-Start a new task after installation so the app and skill are loaded. Open `/hooks` and review the two Composio hooks before trusting them; the hooks report local CLI state and provide surface-neutral routing guidance.
+Start a new task after installation so the app and skill are loaded. Open `/hooks` and review the two Composio hooks before trusting them; the hooks report local CLI state and provide environment-aware routing guidance.
 
-The CLI is optional for hosted app workflows. Install it only when local automation is useful:
+The CLI is optional for hosted app workflows and preferred in terminal or Codex environments:
 
 ```bash
 curl -fsSL https://composio.dev/install | bash
@@ -48,7 +50,7 @@ composio login
 
 ## Routing examples
 
-- “What is on my calendar tomorrow?” uses the hosted app when its tools are callable and authorized.
+- “What is on my calendar tomorrow?” uses the hosted app in ChatGPT web/app and prefers the CLI in a terminal or Codex session.
 - “Upload this local report and keep the workflow as a script” uses the CLI when it is available.
 - “Create this confirmed issue” executes once on the selected surface and returns the created identifier.
 - If a write times out, the next step is a read or status check, not replaying it through the other surface.
