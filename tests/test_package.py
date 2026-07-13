@@ -19,8 +19,10 @@ class PluginPackageTests(unittest.TestCase):
         self.assertEqual("composio", manifest["name"])
         self.assertEqual(manifest["name"], entry["name"])
         self.assertEqual("./plugins/composio", entry["source"]["path"])
+        self.assertEqual("https://docs.composio.dev/docs/cli", manifest["homepage"])
         self.assertRegex(manifest["version"], r"^\d+\.\d+\.\d+$")
         self.assertNotIn("[TODO:", json.dumps(manifest))
+        self.assertNotIn("ChatGPT", json.dumps(manifest))
 
         interface = manifest["interface"]
         for field in ("composerIcon", "logo"):
@@ -28,10 +30,14 @@ class PluginPackageTests(unittest.TestCase):
             self.assertTrue(asset.is_file(), asset)
             self.assertEqual(".png", asset.suffix)
 
-    def test_local_package_uses_cli_auth_without_raw_mcp(self):
+    def test_package_is_cli_only(self):
         manifest = self.load_json(PLUGIN / ".codex-plugin" / "plugin.json")
         self.assertNotIn("mcpServers", manifest)
+        self.assertNotIn("apps", manifest)
         self.assertFalse((PLUGIN / ".mcp.json").exists())
+        self.assertFalse((PLUGIN / ".app.json").exists())
+        self.assertFalse((ROOT / "docs" / "app-wiring.md").exists())
+        self.assertFalse((ROOT / "submission" / "test-cases.json").exists())
 
         package_text = "\n".join(
             path.read_text(encoding="utf-8")
@@ -40,37 +46,39 @@ class PluginPackageTests(unittest.TestCase):
         )
         self.assertNotIn("export COMPOSIO_API_KEY", package_text)
         self.assertNotIn("env_http_headers", package_text)
+        self.assertNotIn("COMPOSIO_SEARCH_TOOLS", package_text)
 
-    def test_app_binding_is_not_fabricated(self):
-        manifest = self.load_json(PLUGIN / ".codex-plugin" / "plugin.json")
-        self.assertNotIn("apps", manifest)
-        self.assertFalse((PLUGIN / ".app.json").exists())
-
-        handoff = (ROOT / "docs" / "app-wiring.md").read_text(encoding="utf-8")
-        self.assertIn('"apps": "./.app.json"', handoff)
-        self.assertIn('"id": "<OPENAI_ASSIGNED_APP_ID>"', handoff)
-        self.assertIn("Do not add `.mcp.json`", handoff)
-
-    def test_skills_have_frontmatter(self):
+    def test_bundles_only_the_stable_cli_skill(self):
         skills = sorted((PLUGIN / "skills").glob("*/SKILL.md"))
-        self.assertEqual(2, len(skills))
-        for skill in skills:
-            text = skill.read_text(encoding="utf-8")
-            self.assertTrue(text.startswith("---\nname:"), skill)
-            self.assertIn("\ndescription:", text, skill)
+        self.assertEqual([PLUGIN / "skills" / "composio-cli" / "SKILL.md"], skills)
 
-    def test_submission_case_counts(self):
-        cases = self.load_json(ROOT / "submission" / "test-cases.json")
-        self.assertEqual(5, len(cases["positive"]))
-        self.assertEqual(3, len(cases["negative"]))
+        skill = skills[0].read_text(encoding="utf-8")
+        self.assertTrue(skill.startswith("---\nname: composio-cli\n"))
+        self.assertIn("\ndescription:", skill)
+        self.assertIn("source: @composio/cli@0.2.31, stable channel", skill)
+        self.assertIn("GITHUB_CREATE_AN_ISSUE", skill)
+        self.assertNotIn("GITHUB_CREATE_ISSUE", skill)
+        self.assertNotIn("composio setup", skill)
+        self.assertNotIn("composio listen", skill)
+        self.assertNotIn("--no-browser", skill)
+
+        references = PLUGIN / "skills" / "composio-cli" / "references"
         self.assertEqual(
-            8,
-            len({case["id"] for group in ("positive", "negative") for case in cases[group]}),
+            {"composio-dev.md", "power-user-examples.md", "troubleshooting.md"},
+            {path.name for path in references.glob("*.md")},
         )
-        self.assertEqual(
-            {"connected-app"},
-            {case["surface"] for case in cases["positive"]},
-        )
+        troubleshooting = (references / "troubleshooting.md").read_text(encoding="utf-8")
+        composio_dev = (references / "composio-dev.md").read_text(encoding="utf-8")
+        self.assertNotIn("composio link gmail --no-browser", troubleshooting)
+        self.assertNotIn("composio dev orgs", composio_dev)
+
+    def test_readme_documents_released_install_flow(self):
+        readme = (ROOT / "README.md").read_text(encoding="utf-8")
+        self.assertIn("composio login", readme)
+        self.assertIn("codex plugin marketplace add ComposioHQ/composio-plugin-openai", readme)
+        self.assertIn("codex plugin add composio@composio", readme)
+        self.assertNotIn("composio setup", readme)
+        self.assertNotIn("/path/to/plugin-creator", readme)
 
 
 if __name__ == "__main__":

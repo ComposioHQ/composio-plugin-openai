@@ -1,59 +1,118 @@
 ---
 name: composio-cli
-description: Operate the local Composio CLI from Codex to find tools, connect apps, inspect schemas, execute actions, and script workflows. Use when the `composio` binary is available or the user explicitly asks for `composio`, `composio dev`, `composio link`, `composio execute`, `composio run`, or `composio proxy`.
+description: Help users operate the published Composio CLI to find the right tool, connect accounts, inspect schemas, execute tools, script workflows with `composio run`, and call authenticated app APIs with `composio proxy`. Use when the user asks how to do something with `composio`, wants to run a known tool slug, needs to discover a slug with `composio search`, fix a missing connection with `composio link`, inspect tool inputs with `--get-schema` or `--dry-run`, troubleshoot top-level CLI flows, or explicitly needs `composio dev` guidance.
 ---
+
+<!-- source: @composio/cli@0.2.31, stable channel -->
 
 # Composio CLI
 
-Use this skill only where local shell commands are available. For ChatGPT or hosted Codex app workflows, use `composio-connect` only when the current session already exposes the connected Composio app tools.
+## Default Workflow
 
-## Default workflow
+1. Start with `composio execute <slug>` whenever the slug is known.
+2. If several independent tool calls must happen at once, use `composio execute -p/--parallel` with repeated `<slug> -d <json>` groups.
+3. If `execute` says the toolkit is not connected, run `composio link <toolkit>` and retry.
+4. If the arguments are unclear, run `composio execute <slug> --get-schema` or `--dry-run` before guessing.
+5. Reach for `composio search "<task>"` only when the slug is unknown. `search` accepts one or more queries, so batch related discovery work into a single command when useful.
 
-1. If the slug is known, start with `composio execute <slug>`.
-2. If arguments are unclear, inspect them with `--get-schema` or preview with `--dry-run` before guessing.
-3. If the slug is unknown, use `composio search "<task>"`. Batch related discovery queries into one command when useful.
-4. If the toolkit is not connected, run `composio link <toolkit>` and retry the original command.
-5. Use `composio execute --parallel` for a few independent calls. Use `composio run` for control flow, loops, output plumbing, or programmatic workflows.
+## `execute` - Run A Tool
 
-## Execute a tool
+Use `execute` when the tool slug is already known.
 
 ```bash
 composio execute GITHUB_GET_THE_AUTHENTICATED_USER -d '{}'
-composio execute GITHUB_CREATE_ISSUE --get-schema
-composio execute GITHUB_CREATE_ISSUE --skip-connection-check --dry-run \
-  -d '{ owner: "acme", repo: "app", title: "Bug report" }'
 ```
 
-Inputs can come from a file or standard input:
-
+Inspect required inputs without executing:
 ```bash
-composio execute GITHUB_CREATE_ISSUE -d @issue.json
-composio execute GITHUB_CREATE_ISSUE -d - < issue.json
+composio execute GITHUB_CREATE_AN_ISSUE --get-schema
 ```
 
-Run independent calls in parallel:
+Preview safely:
+```bash
+composio execute GITHUB_CREATE_AN_ISSUE --skip-connection-check --dry-run -d '{ owner: "acme", repo: "app", title: "Bug report", body: "Steps to reproduce..." }'
+```
 
+Pass data from a file or stdin:
+```bash
+composio execute GITHUB_CREATE_AN_ISSUE -d @issue.json
+cat issue.json | composio execute GITHUB_CREATE_AN_ISSUE -d -
+```
+
+Upload a local file:
+```bash
+composio execute SLACK_UPLOAD_OR_CREATE_A_FILE_IN_SLACK \
+  --file ./image.png \
+  -d '{ channels: "C123" }'
+```
+
+Run independent tool calls in parallel:
 ```bash
 composio execute --parallel \
-  GMAIL_SEND_EMAIL -d '{ recipient_email: "person@example.com", subject: "Hello" }' \
-  GITHUB_CREATE_ISSUE -d '{ owner: "acme", repo: "app", title: "Bug" }'
+  GMAIL_SEND_EMAIL -d '{ recipient_email: "a@b.com", subject: "Hi" }' \
+  GITHUB_CREATE_AN_ISSUE -d '{ owner: "acme", repo: "app", title: "Bug" }'
 ```
 
-## Discover and connect
+Key flags:
+- `--get-schema`: Inspect required arguments without executing the tool.
+- `--dry-run`: Preview the request shape without performing the action.
+- `--file`: Inject a local file path into a tool that exposes exactly one uploadable file argument.
+- `--parallel`: Execute multiple independent tool calls in the same invocation.
+- `--account`: Select which connected account to use by alias, word_id, or account id when multiple accounts exist for the same toolkit.
+
+- `--file` only works when the tool exposes a single uploadable file input. Otherwise use explicit `-d` JSON.
+
+## `search` - Find The Slug
+
+Use `search` only when the tool slug is not already known.
 
 ```bash
-composio search "create a github issue" "send an email"
+composio search "create a github issue"
 composio search "send an email" --toolkits gmail
-composio link gmail
-composio link googlecalendar
+composio search "send an email" "create a github issue"
+composio search "my emails" "my github issues" --toolkits gmail,github
 ```
 
-Retry the original execution after linking succeeds.
+- Batch related discovery work into one `search` invocation, then move back to `execute` once the correct slugs are known.
 
-## Programmatic workflows
+## `link` - Connect An Account
 
-`composio run` executes inline ESM JavaScript or TypeScript with authenticated `execute()`, `search()`, and `proxy()` helpers.
+Use `link` when `execute` reports that a toolkit is not connected, or when the user explicitly wants to authorize an account.
 
+```bash
+composio link gmail
+composio link googlecalendar --no-wait
+```
+
+Key flags:
+- `--alias`: Assign an alias to the connected account. Required when creating an additional account for the same toolkit.
+
+- Retry the original `execute` command after linking succeeds.
+
+## `proxy` - Raw API Access
+
+Use `proxy` when a toolkit supports a raw API operation that is easier than finding a dedicated tool slug.
+
+```bash
+composio proxy https://api.github.com/user --toolkit github --method GET </dev/null
+```
+
+## `run` - Scripting, LLMs, and Programmatic Workflows
+
+For programmatic calls, loops, output plumbing, or anything beyond a single tool call, prefer `composio run`.
+
+`composio run` executes an inline ESM JavaScript/TypeScript snippet with authenticated `execute()`, `search()`, `proxy()`, and the experimental `experimental_subAgent()` helper pre-injected. No SDK setup required.
+
+Chain multiple tools:
+```bash
+composio run '
+  const me = await execute("GITHUB_GET_THE_AUTHENTICATED_USER");
+  const emails = await execute("GMAIL_FETCH_EMAILS", { max_results: 1 });
+  console.log({ login: me.data.login, fetchedEmails: !!emails.data });
+'
+```
+
+Fan out with Promise.all:
 ```bash
 composio run '
   const [me, emails] = await Promise.all([
@@ -64,16 +123,29 @@ composio run '
 '
 ```
 
-Use `composio proxy` for a raw API operation when it is clearer than finding a dedicated slug:
-
+Feed tool output into an LLM and get structured JSON back:
 ```bash
-composio proxy https://api.github.com/user --toolkit github -X GET </dev/null
+composio run --logs-off '
+  const emails = await execute("GMAIL_FETCH_EMAILS", { max_results: 5 });
+  const brief = await experimental_subAgent(
+    `Summarize these emails and count them.\n\n${emails.prompt()}`,
+    { schema: z.object({ summary: z.string(), count: z.number() }) }
+  );
+  console.log(brief.structuredOutput);
+'
 ```
 
-## Authentication and developer mode
+- Use top-level `execute --parallel` instead when the user only needs a few independent tool calls and does not need script logic.
 
-Check the current identity with `composio whoami`. If it is unauthenticated, run `composio setup --target codex --yes`, then return to the original command. Setup establishes the human or agent identity and idempotently ensures this plugin is installed. If an older CLI does not recognize `setup`, update the CLI; `composio login` is the temporary fallback for human sessions.
+## Auth
 
-Never ask the user to export or persist `COMPOSIO_API_KEY` for local Codex. The CLI reads its own authenticated identity.
+```bash
+composio whoami   # check current session
+composio login    # authenticate if whoami fails
+```
 
-Reserve `composio dev` for developer projects, auth configs, connected-account administration, triggers, logs, organizations, or project context. Ordinary end-user work should stay on top-level `execute`, `search`, `link`, `run`, and `proxy` commands.
+## Escalate Only When Needed
+
+If the user is stuck on top-level commands or needs fallback inspection commands, load [references/troubleshooting.md](references/troubleshooting.md).
+
+If the user explicitly asks about developer projects, auth configs, connected accounts, triggers, logs, orgs, or projects, load [references/composio-dev.md](references/composio-dev.md). `composio dev` is not the default end-user path.
