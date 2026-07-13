@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Add Composio session context and refresh the prompt hook's toolkit cache.
+# Add surface-neutral Composio context and refresh the local CLI toolkit cache.
 
 set -u
 cat >/dev/null 2>&1 || true
@@ -24,20 +24,20 @@ if command -v composio >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
 fi
 
 if ! command -v composio >/dev/null 2>&1; then
-  auth="Install the CLI: curl -fsSL https://composio.dev/install | bash, then composio login."
+  cli_status="The local Composio CLI is not available. Use hosted Composio app tools when callable. Install the CLI only if the task needs local files, scripting, pipelines, or reproducible automation: https://composio.dev/install."
 else
-  auth="Run \`composio login\` to connect."
+  cli_status="The local Composio CLI is available but is not signed in; run \`composio login\` before choosing it."
   if whoami_output="$(composio whoami 2>&1)" \
       && [ -n "$(printf '%s' "$whoami_output" | tr -d '[:space:]')" ] \
       && ! printf '%s' "$whoami_output" | grep -Eiq \
         '"authenticated"[[:space:]]*:[[:space:]]*false|not[[:space:]-]+logged[[:space:]-]+in'; then
-    auth="You're signed in to Composio."
+    cli_status="The local Composio CLI is available and signed in."
   fi
 fi
 
 [ -n "$cache_pid" ] && wait "$cache_pid" 2>/dev/null
 
-line="Composio is available in this session. For any task involving an external app or service (email, calendar, GitHub, Slack, CRMs, docs — 1,000+ apps), run \`composio execute <slug>\` directly when the tool slug is known. Otherwise, resolve it with \`composio search \"<task>\"\`, then execute the result. Auth is fully managed. ${auth} Run \`composio --help\` for full usage."
+line="Composio may be available through hosted app tools, the local CLI, or both. Use callable, authorized hosted Composio app tools for direct SaaS reads and actions. Use the local Composio CLI for local files, scripts, pipelines, or reproducible automation. If both are available, choose by task requirements without asking unless the outcome would materially change. Never automatically retry an uncertain write through the other surface. ${cli_status}"
 
 if command -v jq >/dev/null 2>&1; then
   jq -n --arg c "$line" \

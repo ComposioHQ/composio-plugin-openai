@@ -1,3 +1,4 @@
+import hashlib
 import json
 import os
 import pathlib
@@ -6,20 +7,32 @@ import stat
 import subprocess
 import tempfile
 import unittest
+import zipfile
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins" / "composio"
 HOOKS = PLUGIN / "hooks"
-SKILL = PLUGIN / "skills" / "composio-cli"
+SKILL = PLUGIN / "skills" / "composio"
 LISTING = ROOT / "submission" / "listing.json"
 TEST_CASES = ROOT / "submission" / "test-cases.json"
+SKILL_ZIP = ROOT / "submission" / "composio-skill.zip"
+SKILL_CHECKSUM = ROOT / "submission" / "composio-skill.sha256"
 
 
 class PluginPackageTests(unittest.TestCase):
     def load_json(self, path):
         with path.open(encoding="utf-8") as handle:
             return json.load(handle)
+
+    def package_text(self):
+        paths = [ROOT / "README.md", LISTING, TEST_CASES]
+        paths.extend(
+            path
+            for path in PLUGIN.rglob("*")
+            if path.is_file() and path.suffix in {".json", ".md", ".sh", ".yaml"}
+        )
+        return "\n".join(path.read_text(encoding="utf-8") for path in paths)
 
     def test_names_and_marketplace_source_match(self):
         manifest = self.load_json(PLUGIN / ".codex-plugin" / "plugin.json")
@@ -28,11 +41,14 @@ class PluginPackageTests(unittest.TestCase):
         self.assertEqual("composio", manifest["name"])
         self.assertEqual(manifest["name"], entry["name"])
         self.assertEqual("./plugins/composio", entry["source"]["path"])
-        self.assertEqual("https://docs.composio.dev/docs/cli", manifest["homepage"])
-        self.assertRegex(manifest["version"], r"^\d+\.\d+\.\d+$")
+        self.assertEqual("https://composio.dev", manifest["homepage"])
+        self.assertRegex(
+            manifest["version"],
+            r"^\d+\.\d+\.\d+(?:\+codex\.[0-9A-Za-z.-]+)?$",
+        )
         self.assertNotIn("[TODO:", json.dumps(manifest))
-        self.assertNotIn("ChatGPT", json.dumps(manifest))
         self.assertEqual("./skills/", manifest["skills"])
+        self.assertEqual("./.app.json", manifest["apps"])
 
         interface = manifest["interface"]
         for field in ("composerIcon", "logo"):
@@ -40,50 +56,111 @@ class PluginPackageTests(unittest.TestCase):
             self.assertTrue(asset.is_file(), asset)
             self.assertEqual(".png", asset.suffix)
 
-    def test_package_is_skills_only(self):
-        manifest = self.load_json(PLUGIN / ".codex-plugin" / "plugin.json")
-        self.assertNotIn("mcpServers", manifest)
-        self.assertNotIn("apps", manifest)
+    def test_app_plus_skills_wiring(self):
+        app_path = PLUGIN / ".app.json"
+        self.assertTrue(app_path.is_file())
+        app_manifest = self.load_json(app_path)
+        self.assertEqual({"composio"}, set(app_manifest["apps"]))
+        app = app_manifest["apps"]["composio"]
+        self.assertRegex(app["id"], r"^plugin_asdk_app[A-Za-z0-9_]+$")
+        self.assertEqual("Productivity", app["category"])
+
         self.assertFalse((PLUGIN / ".mcp.json").exists())
-        self.assertFalse((PLUGIN / ".app.json").exists())
-        self.assertFalse((ROOT / "docs" / "app-wiring.md").exists())
-        self.assertTrue(TEST_CASES.is_file())
         self.assertTrue(SKILL.is_dir())
+        self.assertTrue(TEST_CASES.is_file())
 
-        package_text = "\n".join(
-            path.read_text(encoding="utf-8")
-            for path in ROOT.rglob("*")
-            if path.is_file() and path.suffix in {".md", ".json"}
-        )
-        self.assertNotIn("export COMPOSIO_API_KEY", package_text)
-        self.assertNotIn("env_http_headers", package_text)
-        self.assertNotIn("COMPOSIO_SEARCH_TOOLS", package_text)
-
-    def test_bundled_skill_is_complete_and_stable(self):
+    def test_bundled_skill_is_surface_aware_and_plugin_owned(self):
         skill_text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("name: composio-cli", skill_text)
-        self.assertIn("release-channel: stable", skill_text)
-        self.assertIn("AUTO-GENERATED", skill_text)
+        self.assertIn("name: composio", skill_text)
+        self.assertNotIn("AUTO-GENERATED", skill_text)
+        self.assertNotIn("[TODO:", skill_text)
+        self.assertFalse(
+            (PLUGIN / "skills" / "composio-cli" / "SKILL.md").exists()
+        )
         self.assertTrue((SKILL / "agents" / "openai.yaml").is_file())
+        self.assertIn(
+            "$composio",
+            (SKILL / "agents" / "openai.yaml").read_text(encoding="utf-8"),
+        )
         self.assertEqual(
-            {"composio-dev.md", "power-user-examples.md", "troubleshooting.md"},
+            {"mcp.md", "cli.md"},
             {path.name for path in (SKILL / "references").glob("*.md")},
         )
 
+    def test_skill_encodes_the_routing_and_write_contract(self):
+        skill_text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
+        for phrase in (
+            "callable, authorized hosted Composio app tools",
+            "local Composio CLI",
+            "If both surfaces are available",
+            "If neither surface is available",
+            "MCP-only environment",
+            "execute it exactly once",
+            "Never automatically retry an uncertain write through the other surface",
+        ):
+            self.assertIn(phrase, skill_text)
+
+        mcp_reference = (SKILL / "references" / "mcp.md").read_text(
+            encoding="utf-8"
+        )
+        cli_reference = (SKILL / "references" / "cli.md").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn("tool-discovery", mcp_reference)
+        self.assertIn("connection-management", mcp_reference)
+        self.assertIn("Do not replay", mcp_reference)
+        self.assertIn("composio execute", cli_reference)
+        self.assertIn("composio search", cli_reference)
+        self.assertIn("composio link", cli_reference)
+        self.assertIn("composio run", cli_reference)
+        self.assertIn("Do not replay", cli_reference)
+
+    def test_package_content_scan_is_scoped_to_shipped_files(self):
+        package_text = self.package_text()
+        self.assertNotIn("export COMPOSIO_API_KEY", package_text)
+        self.assertNotIn("env_http_headers", package_text)
+        self.assertNotIn("[TODO:", package_text)
+        self.assertNotIn("AUTO-GENERATED", package_text)
+
+    def test_skill_submission_bundle_matches_the_source_tree(self):
+        expected_files = {
+            f"composio/{path.relative_to(SKILL).as_posix()}"
+            for path in SKILL.rglob("*")
+            if path.is_file()
+        }
+        with zipfile.ZipFile(SKILL_ZIP) as bundle:
+            bundled_files = {name for name in bundle.namelist() if not name.endswith("/")}
+            self.assertEqual(expected_files, bundled_files)
+            for bundled_path in bundled_files:
+                source = SKILL / pathlib.PurePosixPath(bundled_path).relative_to("composio")
+                self.assertEqual(source.read_bytes(), bundle.read(bundled_path))
+
+        expected_checksum = SKILL_CHECKSUM.read_text(encoding="utf-8").split()[0]
+        actual_checksum = hashlib.sha256(SKILL_ZIP.read_bytes()).hexdigest()
+        self.assertEqual(expected_checksum, actual_checksum)
+
     def test_submission_materials_are_complete(self):
         listing = self.load_json(LISTING)
-        self.assertEqual("Composio CLI", listing["name"])
+        self.assertEqual("Composio", listing["name"])
         self.assertEqual("https://composio.dev/support", listing["supportUrl"])
         self.assertEqual(["US"], listing["availability"])
         self.assertEqual(3, len(listing["starterPrompts"]))
-        self.assertNotIn("MCP", listing["longDescription"])
+        self.assertIn("hosted Composio app tools", listing["longDescription"])
+        self.assertIn("local Composio CLI", listing["longDescription"])
+        self.assertIn("app-plus-skills", listing["releaseNotes"])
 
         cases = self.load_json(TEST_CASES)
         self.assertEqual(5, len(cases["positive"]))
         self.assertEqual(3, len(cases["negative"]))
         for case in cases["positive"]:
             self.assertTrue(
-                {"name", "prompt", "expectedBehavior", "expectedResultShape", "fixtures"}
+                {
+                    "name",
+                    "prompt",
+                    "expectedBehavior",
+                    "expectedResultShape",
+                    "fixtures",
+                }
                 <= set(case)
             )
         for case in cases["negative"]:
@@ -91,7 +168,20 @@ class PluginPackageTests(unittest.TestCase):
                 {"name", "prompt", "expectedBehavior", "reason"} <= set(case)
             )
 
-    def test_hooks_match_the_cli_plugin_contract(self):
+        positive = "\n".join(case["expectedBehavior"] for case in cases["positive"])
+        negative = "\n".join(case["expectedBehavior"] for case in cases["negative"])
+        for phrase in (
+            "MCP-only environment",
+            "tool discovery",
+            "connection management",
+            "exactly once",
+            "stay on the hosted surface",
+        ):
+            self.assertIn(phrase, positive)
+        for phrase in ("Do not discover or execute", "Do not execute bulk deletion", "Do not replay"):
+            self.assertIn(phrase, negative)
+
+    def test_hooks_match_the_surface_aware_contract(self):
         config = self.load_json(HOOKS / "hooks.json")["hooks"]
         self.assertEqual({"SessionStart", "UserPromptSubmit"}, set(config))
         self.assertEqual(8, config["SessionStart"][0]["hooks"][0]["timeout"])
@@ -109,14 +199,25 @@ class PluginPackageTests(unittest.TestCase):
                     self.assertTrue(script.is_file(), script)
                     self.assertTrue(script.stat().st_mode & stat.S_IXUSR, script)
 
-    def test_readme_documents_released_install_flow(self):
+        hook_text = "\n".join(
+            (HOOKS / name).read_text(encoding="utf-8")
+            for name in ("session-start.sh", "user-prompt-submit.sh")
+        )
+        self.assertIn("hosted Composio app tools", hook_text)
+        self.assertIn("local Composio CLI", hook_text)
+        self.assertIn("uncertain write", hook_text)
+        self.assertNotIn("run `composio execute <slug>` directly", hook_text)
+
+    def test_readme_documents_the_combined_local_flow(self):
         readme = (ROOT / "README.md").read_text(encoding="utf-8")
-        self.assertIn("composio login", readme)
-        self.assertNotIn("composio --install-skill composio-cli codex", readme)
-        self.assertIn("bundles the canonical CLI skill", readme)
+        self.assertIn("hosted Composio app", readme)
+        self.assertIn("Composio CLI", readme)
         self.assertIn("codex plugin marketplace add ComposioHQ/composio-plugin-openai", readme)
         self.assertIn("codex plugin add composio@composio", readme)
-        self.assertIn("/hooks", readme)
+        self.assertIn("Start a new task", readme)
+        self.assertIn("plugin_asdk_app", readme)
+        self.assertIn("uncertain write", readme)
+        self.assertNotIn("bundles the canonical CLI skill", readme)
         self.assertNotIn("composio setup", readme)
         self.assertNotIn("/path/to/plugin-creator", readme)
 
@@ -157,7 +258,7 @@ class HookBehaviorTests(unittest.TestCase):
         script.chmod(0o755)
         return f"{bindir}:{os.environ.get('PATH', '')}"
 
-    def test_session_start_reports_auth_and_warms_cache(self):
+    def test_session_start_reports_local_auth_and_warms_cache(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             path = self.fake_composio(
                 tmpdir,
@@ -173,11 +274,14 @@ class HookBehaviorTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stderr)
             output = json.loads(result.stdout)["hookSpecificOutput"]
             self.assertEqual("SessionStart", output["hookEventName"])
-            self.assertIn("You're signed in to Composio.", output["additionalContext"])
+            context = output["additionalContext"]
+            self.assertIn("hosted Composio app tools", context)
+            self.assertIn("local Composio CLI is available and signed in", context)
+            self.assertIn("uncertain write", context)
             cache = pathlib.Path(tmpdir) / "composio-plugin-toolkits.cache"
             self.assertEqual({"gmail", "github"}, set(cache.read_text().splitlines()))
 
-    def test_session_start_handles_missing_cli(self):
+    def test_session_start_keeps_mcp_first_when_cli_is_missing(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             empty = pathlib.Path(tmpdir) / "empty"
             empty.mkdir()
@@ -187,35 +291,40 @@ class HookBehaviorTests(unittest.TestCase):
             )
             self.assertEqual(0, result.returncode, result.stderr)
             context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
-            self.assertIn("composio.dev/install", context)
-            self.assertIn("composio execute <slug>", context)
-            self.assertIn("composio search", context)
+            self.assertIn("hosted Composio app tools", context)
+            self.assertIn("local Composio CLI is not available", context)
+            self.assertIn("Install the CLI only", context)
             self.assertLess(
-                context.index("composio execute"), context.index("composio search")
+                context.index("hosted Composio app tools"), context.index("Install the CLI only")
             )
+            self.assertNotIn("composio execute", context)
+            self.assertNotIn("composio search", context)
 
-    def test_prompt_hook_fires_only_for_cached_toolkits(self):
+    def test_prompt_hook_is_surface_aware_for_cached_toolkits(self):
         with tempfile.TemporaryDirectory() as tmpdir:
             cache = pathlib.Path(tmpdir) / "composio-plugin-toolkits.cache"
             cache.write_text("github\ngoogle calendar\n", encoding="utf-8")
+            path = self.fake_composio(tmpdir)
 
             matched = self.run_hook(
                 "user-prompt-submit.sh",
                 {"hook_event_name": "UserPromptSubmit", "prompt": "open a github issue"},
                 tmpdir,
+                path,
             )
             self.assertEqual(0, matched.returncode, matched.stderr)
             context = json.loads(matched.stdout)["hookSpecificOutput"]["additionalContext"]
-            self.assertIn("composio execute <slug>", context)
-            self.assertIn("composio search", context)
-            self.assertLess(
-                context.index("composio execute"), context.index("composio search")
-            )
+            self.assertIn("hosted Composio app tools", context)
+            self.assertIn("local Composio CLI is also available", context)
+            self.assertIn("uncertain write", context)
+            self.assertNotIn("composio execute", context)
+            self.assertNotIn("composio search", context)
 
             silent = self.run_hook(
                 "user-prompt-submit.sh",
                 {"hook_event_name": "UserPromptSubmit", "prompt": "refactor this function"},
                 tmpdir,
+                path,
             )
             self.assertEqual(0, silent.returncode, silent.stderr)
             self.assertEqual("", silent.stdout)

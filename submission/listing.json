@@ -1,9 +1,9 @@
 {
-  "name": "Composio CLI",
-  "shortDescription": "Use the Composio CLI across 1,000+ apps",
-  "longDescription": "Use Codex with the Composio CLI to discover tools just in time, connect accounts with managed authentication, inspect schemas, execute actions, and script workflows across services such as GitHub, Gmail, Slack, Notion, and Linear.",
+  "name": "Composio",
+  "shortDescription": "Work safely across 1,000+ connected apps",
+  "longDescription": "Use hosted Composio app tools for direct SaaS reads and actions across services such as GitHub, Gmail, Google Calendar, Slack, Notion, and Linear. When local files, scripts, pipelines, or reproducible automation matter, the bundled skill can use the local Composio CLI instead. Composio manages authentication and tool discovery on both surfaces and prevents automatic cross-surface replay of uncertain writes.",
   "category": "Productivity",
-  "websiteUrl": "https://composio.dev/cli",
+  "websiteUrl": "https://composio.dev",
   "supportUrl": "https://composio.dev/support",
   "privacyPolicyUrl": "https://composio.dev/privacy",
   "termsOfServiceUrl": "https://composio.dev/terms",
@@ -15,5 +15,5 @@
   "availability": [
     "US"
   ],
-  "releaseNotes": "Initial skills-only submission. Bundles the stable Composio CLI workflow for tool discovery, managed account linking, safe execution, and multi-app scripting without an MCP app."
+  "releaseNotes": "Initial app-plus-skills submission. Combines the hosted MCP-backed Composio app with a surface-aware skill and an optional local CLI path for files, scripts, pipelines, and reproducible automation."
 }
