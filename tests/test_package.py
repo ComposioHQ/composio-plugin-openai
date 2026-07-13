@@ -188,7 +188,11 @@ class HookBehaviorTests(unittest.TestCase):
             self.assertEqual(0, result.returncode, result.stderr)
             context = json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
             self.assertIn("composio.dev/install", context)
+            self.assertIn("composio execute <slug>", context)
             self.assertIn("composio search", context)
+            self.assertLess(
+                context.index("composio execute"), context.index("composio search")
+            )
 
     def test_prompt_hook_fires_only_for_cached_toolkits(self):
         with tempfile.TemporaryDirectory() as tmpdir:
@@ -202,7 +206,11 @@ class HookBehaviorTests(unittest.TestCase):
             )
             self.assertEqual(0, matched.returncode, matched.stderr)
             context = json.loads(matched.stdout)["hookSpecificOutput"]["additionalContext"]
+            self.assertIn("composio execute <slug>", context)
             self.assertIn("composio search", context)
+            self.assertLess(
+                context.index("composio execute"), context.index("composio search")
+            )
 
             silent = self.run_hook(
                 "user-prompt-submit.sh",
