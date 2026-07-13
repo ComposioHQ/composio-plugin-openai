@@ -75,8 +75,6 @@ Google Calendar events, then give me a concise summary.
 python3 -m unittest discover -s tests -v
 ```
 
-See [the publishing runbook](docs/publishing.md) for the submission checklist, reviewer fixtures, release process, and fast-follow options.
-
 ## License
 
 MIT — see [LICENSE](./LICENSE).
