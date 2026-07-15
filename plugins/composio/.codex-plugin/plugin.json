@@ -21,6 +21,7 @@
     "productivity"
   ],
   "skills": "./skills/",
+  "apps": "./.app.json",
   "interface": {
     "displayName": "Composio",
     "shortDescription": "Work across 1,000+ apps",
