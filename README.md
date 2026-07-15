@@ -28,7 +28,7 @@ codex plugin marketplace add ComposioHQ/composio-plugin-openai
 codex plugin add composio@composio
 ```
 
-Start a new task after installation so the app and skill are loaded. Open `/hooks` and review the two Composio hooks before trusting them; the hooks report local CLI state and provide environment-aware routing guidance.
+Refresh or restart the ChatGPT desktop app after installation, then start a new task so the app and skill are loaded. Open `/hooks` and review the two Composio hooks before trusting them; the hooks report local CLI state and provide environment-aware routing guidance.
 
 The CLI is optional for hosted app workflows and preferred in terminal or Codex environments:
 
@@ -41,7 +41,7 @@ composio login
 
 | Component | Purpose |
 |---|---|
-| `.app.json` | Points the plugin at the team-owned Composio developer-mode app. |
+| `.app.json` | Points local plugin installs at the team-owned Composio Developer Mode app. |
 | `skills/composio` | Routes work by capability and defines safety boundaries across hosted app and CLI surfaces. |
 | `skills/composio/references/mcp.md` | Covers hosted discovery, connection recovery, execution, and uncertain-write handling. |
 | `skills/composio/references/cli.md` | Covers local discovery, execution, files, scripting, and auth. |
@@ -57,20 +57,29 @@ composio login
 
 ## Local development
 
-Run the package tests:
+Run the package tests and validators:
 
 ```bash
 python3 -m unittest discover -s tests -v
+python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/composio
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/composio/skills/composio
 ```
 
-For a local checkout, add this repository as a marketplace, install the plugin, and start a new task:
+For a local checkout, add this repository as a marketplace and install the plugin:
 
 ```bash
 codex plugin marketplace add .
 codex plugin add composio@composio
 ```
 
-A working local app install requires the real `plugin_asdk_app...` ID in `plugins/composio/.app.json`; the public submission uses the production MCP URL rather than that developer-mode ID.
+The checked-in app manifest contains the current Developer Mode app ID. The public submission is separate: OpenAI scans `https://connect.composio.dev/mcp` rather than reusing this development app reference.
+
+Test app loading in the ChatGPT desktop app, not only through the CLI:
+
+1. Refresh or restart ChatGPT and enable the locally installed Composio plugin.
+2. Start a new task and confirm the hosted app exposes exactly these seven tools: `COMPOSIO_MANAGE_CONNECTIONS`, `COMPOSIO_MULTI_EXECUTE_TOOL`, `COMPOSIO_REMOTE_BASH_TOOL`, `COMPOSIO_REMOTE_WORKBENCH`, `COMPOSIO_SEARCH_TOOLS`, `COMPOSIO_WAIT_FOR_CONNECTIONS`, and `COMPOSIO_GET_TOOL_SCHEMAS`.
+3. Complete OAuth and run a read-only discovery call before testing any write.
+4. In a terminal/Codex task, confirm the plugin prefers a signed-in local CLI and retains the hosted app as its bounded fallback.
 
 ## License
 

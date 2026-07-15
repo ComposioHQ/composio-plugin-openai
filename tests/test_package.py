@@ -62,7 +62,10 @@ class PluginPackageTests(unittest.TestCase):
         app_manifest = self.load_json(app_path)
         self.assertEqual({"composio"}, set(app_manifest["apps"]))
         app = app_manifest["apps"]["composio"]
-        self.assertRegex(app["id"], r"^plugin_asdk_app[A-Za-z0-9_]+$")
+        self.assertEqual(
+            "plugin_asdk_app_6a57f13d63988191ae58e8494105a461",
+            app["id"],
+        )
         self.assertEqual("Productivity", app["category"])
 
         self.assertFalse((PLUGIN / ".mcp.json").exists())
@@ -219,9 +222,12 @@ class PluginPackageTests(unittest.TestCase):
         self.assertIn("Composio CLI", readme)
         self.assertIn("codex plugin marketplace add ComposioHQ/composio-plugin-openai", readme)
         self.assertIn("codex plugin add composio@composio", readme)
+        self.assertIn("ChatGPT desktop app", readme)
         self.assertIn("Start a new task", readme)
-        self.assertIn("plugin_asdk_app", readme)
+        self.assertIn("exactly these seven tools", readme)
+        self.assertIn("https://connect.composio.dev/mcp", readme)
         self.assertIn("uncertain write", readme)
+        self.assertNotIn("requires the real `plugin_asdk_app", readme)
         self.assertNotIn("bundles the canonical CLI skill", readme)
         self.assertNotIn("composio setup", readme)
         self.assertNotIn("/path/to/plugin-creator", readme)

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Add surface-neutral Composio context and refresh the local CLI toolkit cache.
 
 set -u
 cat >/dev/null 2>&1 || true

@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Add surface-aware guidance when the prompt names a locally cached toolkit.
 
 set -u
 
