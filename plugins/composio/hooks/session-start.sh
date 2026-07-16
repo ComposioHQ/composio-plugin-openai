@@ -1,5 +1,4 @@
 #!/usr/bin/env bash
-# Add Composio session context and refresh the prompt hook's toolkit cache.
 
 set -u
 cat >/dev/null 2>&1 || true
@@ -24,20 +23,20 @@ if command -v composio >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
 fi
 
 if ! command -v composio >/dev/null 2>&1; then
-  auth="Install the CLI: curl -fsSL https://composio.dev/install | bash, then composio login."
+  cli_status="The local Composio CLI is not installed. Ask before installing it from https://composio.dev/install, then run \`composio login\`. Until it is available, use hosted Composio app tools when callable."
 else
-  auth="Run \`composio login\` to connect."
+  cli_status="The local Composio CLI is available but is not signed in; run \`composio login\` before choosing it."
   if whoami_output="$(composio whoami 2>&1)" \
       && [ -n "$(printf '%s' "$whoami_output" | tr -d '[:space:]')" ] \
       && ! printf '%s' "$whoami_output" | grep -Eiq \
         '"authenticated"[[:space:]]*:[[:space:]]*false|not[[:space:]-]+logged[[:space:]-]+in'; then
-    auth="You're signed in to Composio."
+    cli_status="The local Composio CLI is available and signed in."
   fi
 fi
 
 [ -n "$cache_pid" ] && wait "$cache_pid" 2>/dev/null
 
-line="Composio is available in this session. For any task involving an external app or service (email, calendar, GitHub, Slack, CRMs, docs — 1,000+ apps), run \`composio execute <slug>\` directly when the tool slug is known. Otherwise, resolve it with \`composio search \"<task>\"\`, then execute the result. Auth is fully managed. ${auth} Run \`composio --help\` for full usage."
+line="This is a terminal/Codex session. Prefer the local Composio CLI for Composio work, including direct SaaS actions and workflows involving local files, scripts, pipelines, or reproducible automation. ${cli_status} Use callable hosted Composio app tools when the CLI is unavailable, the user explicitly requests them, or the needed capability exists only there. Never automatically retry an uncertain write through the other surface."
 
 if command -v jq >/dev/null 2>&1; then
   jq -n --arg c "$line" \

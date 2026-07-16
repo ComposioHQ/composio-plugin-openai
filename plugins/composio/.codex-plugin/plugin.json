@@ -1,17 +1,19 @@
 {
   "name": "composio",
   "version": "0.2.0",
-  "description": "Your agent decides what to do — Composio handles the rest. Just-in-time tool calls across 1,000+ apps (Slack, GitHub, Gmail, Notion, Linear…) with fully managed auth, driven by the Composio CLI.",
+  "description": "Your agent decides what to do — Composio handles the rest. Use just-in-time tool calls across 1,000+ apps with managed auth through the hosted app or local CLI.",
   "author": {
     "name": "Composio",
     "email": "tech@composio.dev",
     "url": "https://composio.dev"
   },
-  "homepage": "https://docs.composio.dev/docs/cli",
+  "homepage": "https://composio.dev",
   "repository": "https://github.com/ComposioHQ/composio-plugin-openai",
   "license": "MIT",
   "keywords": [
     "composio",
+    "app",
+    "mcp",
     "cli",
     "codex",
     "integrations",
@@ -19,10 +21,11 @@
     "productivity"
   ],
   "skills": "./skills/",
+  "apps": "./.app.json",
   "interface": {
     "displayName": "Composio",
     "shortDescription": "Work across 1,000+ apps",
-    "longDescription": "Your agent decides what to do — Composio handles the rest. Discover and call tools just in time across 1,000+ apps, including Slack, GitHub, Gmail, Notion, and Linear, with fully managed auth through the Composio CLI.",
+    "longDescription": "Your agent decides what to do — Composio handles the rest. Discover and call tools just in time across 1,000+ apps, including Slack, GitHub, Gmail, Notion, and Linear, with managed auth through the hosted app or local CLI.",
     "developerName": "Composio",
     "category": "Productivity",
     "capabilities": [

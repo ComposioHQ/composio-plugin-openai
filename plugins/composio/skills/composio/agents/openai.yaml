@@ -1,0 +1,4 @@
+interface:
+  display_name: "Composio"
+  short_description: "Route app and CLI work safely"
+  default_prompt: "Use $composio to choose the best Composio surface and complete this workflow safely."
