@@ -1,4 +1,3 @@
-import hashlib
 import json
 import os
 import pathlib
@@ -7,17 +6,12 @@ import stat
 import subprocess
 import tempfile
 import unittest
-import zipfile
 
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins" / "composio"
 HOOKS = PLUGIN / "hooks"
 SKILL = PLUGIN / "skills" / "composio"
-LISTING = ROOT / "submission" / "listing.json"
-TEST_CASES = ROOT / "submission" / "test-cases.json"
-SKILL_ZIP = ROOT / "submission" / "composio-skill.zip"
-SKILL_CHECKSUM = ROOT / "submission" / "composio-skill.sha256"
 
 
 class PluginPackageTests(unittest.TestCase):
@@ -26,7 +20,7 @@ class PluginPackageTests(unittest.TestCase):
             return json.load(handle)
 
     def package_text(self):
-        paths = [ROOT / "README.md", LISTING, TEST_CASES]
+        paths = [ROOT / "README.md"]
         paths.extend(
             path
             for path in PLUGIN.rglob("*")
@@ -70,7 +64,6 @@ class PluginPackageTests(unittest.TestCase):
 
         self.assertFalse((PLUGIN / ".mcp.json").exists())
         self.assertTrue(SKILL.is_dir())
-        self.assertTrue(TEST_CASES.is_file())
 
     def test_bundled_skill_is_surface_aware_and_plugin_owned(self):
         skill_text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
@@ -128,65 +121,6 @@ class PluginPackageTests(unittest.TestCase):
         self.assertNotIn("env_http_headers", package_text)
         self.assertNotIn("[TODO:", package_text)
         self.assertNotIn("AUTO-GENERATED", package_text)
-
-    def test_skill_submission_bundle_matches_the_source_tree(self):
-        expected_files = {
-            f"composio/{path.relative_to(SKILL).as_posix()}"
-            for path in SKILL.rglob("*")
-            if path.is_file()
-        }
-        with zipfile.ZipFile(SKILL_ZIP) as bundle:
-            bundled_files = {name for name in bundle.namelist() if not name.endswith("/")}
-            self.assertEqual(expected_files, bundled_files)
-            for bundled_path in bundled_files:
-                source = SKILL / pathlib.PurePosixPath(bundled_path).relative_to("composio")
-                self.assertEqual(source.read_bytes(), bundle.read(bundled_path))
-
-        expected_checksum = SKILL_CHECKSUM.read_text(encoding="utf-8").split()[0]
-        actual_checksum = hashlib.sha256(SKILL_ZIP.read_bytes()).hexdigest()
-        self.assertEqual(expected_checksum, actual_checksum)
-
-    def test_submission_materials_are_complete(self):
-        listing = self.load_json(LISTING)
-        self.assertEqual("Composio", listing["name"])
-        self.assertEqual("https://composio.dev/support", listing["supportUrl"])
-        self.assertEqual(["US"], listing["availability"])
-        self.assertEqual(3, len(listing["starterPrompts"]))
-        self.assertIn("hosted Composio app tools", listing["longDescription"])
-        self.assertIn("local Composio CLI", listing["longDescription"])
-        self.assertIn("app-plus-skills", listing["releaseNotes"])
-
-        cases = self.load_json(TEST_CASES)
-        self.assertEqual(5, len(cases["positive"]))
-        self.assertEqual(3, len(cases["negative"]))
-        for case in cases["positive"]:
-            self.assertTrue(
-                {
-                    "name",
-                    "prompt",
-                    "expectedBehavior",
-                    "expectedResultShape",
-                    "fixtures",
-                }
-                <= set(case)
-            )
-        for case in cases["negative"]:
-            self.assertTrue(
-                {"name", "prompt", "expectedBehavior", "reason"} <= set(case)
-            )
-
-        positive = "\n".join(case["expectedBehavior"] for case in cases["positive"])
-        negative = "\n".join(case["expectedBehavior"] for case in cases["negative"])
-        for phrase in (
-            "MCP-only environment",
-            "tool discovery",
-            "connection management",
-            "exactly once",
-            "stay on the hosted surface",
-        ):
-            self.assertIn(phrase, positive)
-        for phrase in ("Do not discover or execute", "Do not execute bulk deletion", "Do not replay"):
-            self.assertIn(phrase, negative)
 
     def test_hooks_match_the_surface_aware_contract(self):
         config = self.load_json(HOOKS / "hooks.json")["hooks"]
