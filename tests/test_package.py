@@ -169,7 +169,9 @@ class PluginPackageTests(unittest.TestCase):
 
 class HookBehaviorTests(unittest.TestCase):
     def run_hook(self, script, payload, tmpdir, path=None):
-        env = dict(os.environ, TMPDIR=tmpdir)
+        # HOME is pinned to the sandbox so the upgrade-nudge cache read never
+        # sees the developer's real ~/.composio/update-check.json.
+        env = dict(os.environ, TMPDIR=tmpdir, HOME=tmpdir)
         if path is not None:
             env["PATH"] = path
         return subprocess.run(
@@ -182,11 +184,20 @@ class HookBehaviorTests(unittest.TestCase):
             check=False,
         )
 
-    def fake_composio(self, tmpdir, stdout="", exit_code=0, toolkits=None):
+    def fake_composio(self, tmpdir, stdout="", exit_code=0, toolkits=None, version=None):
         bindir = pathlib.Path(tmpdir) / "bin"
         bindir.mkdir(exist_ok=True)
         script = bindir / "composio"
         lines = ["#!/usr/bin/env bash"]
+        if version is not None:
+            lines.extend(
+                [
+                    'if [ "$1" = "version" ]; then',
+                    f"  printf '%s\\n' {shlex.quote(version)}",
+                    "  exit 0",
+                    "fi",
+                ]
+            )
         if toolkits is not None:
             lines.extend(
                 [
@@ -245,6 +256,61 @@ class HookBehaviorTests(unittest.TestCase):
             )
             self.assertNotIn("composio execute", context)
             self.assertNotIn("composio search", context)
+
+    NUDGE = "newer Composio CLI"
+
+    def write_update_cache(self, tmpdir, content):
+        cache_dir = pathlib.Path(tmpdir) / ".composio"
+        cache_dir.mkdir(exist_ok=True)
+        (cache_dir / "update-check.json").write_text(content, encoding="utf-8")
+
+    def session_context(self, tmpdir, path):
+        result = self.run_hook(
+            "session-start.sh", {"hook_event_name": "SessionStart"}, tmpdir, path
+        )
+        self.assertEqual(0, result.returncode, result.stderr)
+        return json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
+
+    def test_session_start_nudges_upgrade_for_older_stable_cli(self):
+        # SessionStart compares `composio version` against the CLI's own
+        # ~/.composio/update-check.json release cache (local file, no network).
+        with tempfile.TemporaryDirectory() as tmpdir:
+            self.write_update_cache(
+                tmpdir,
+                json.dumps(
+                    {"lastChecked": "2026-07-24T00:00:00.000Z", "latestVersion": "0.2.32"}
+                ),
+            )
+            path = self.fake_composio(
+                tmpdir, stdout='{"authenticated": true}', version="0.2.30"
+            )
+            context = self.session_context(tmpdir, path)
+            self.assertIn("local Composio CLI is available and signed in", context)
+            self.assertIn("A newer Composio CLI (0.2.32) is available", context)
+            self.assertIn("composio upgrade", context)
+
+    def test_session_start_upgrade_nudge_degrades_to_silence(self):
+        cache = json.dumps(
+            {"lastChecked": "2026-07-24T00:00:00.000Z", "latestVersion": "0.2.32"}
+        )
+        silent_cases = [
+            ("beta-installed", cache, "0.2.32-beta.289"),
+            ("up-to-date", cache, "0.2.32"),
+            ("installed-newer", cache, "0.3.0"),
+            ("prerelease-latest", cache.replace("0.2.32", "0.3.0-beta.1"), "0.2.31"),
+            ("malformed-cache", "not json at all {{{", "0.2.30"),
+            ("cache-missing", None, "0.2.30"),
+        ]
+        for name, cache_content, installed in silent_cases:
+            with self.subTest(name):
+                with tempfile.TemporaryDirectory() as tmpdir:
+                    if cache_content is not None:
+                        self.write_update_cache(tmpdir, cache_content)
+                    path = self.fake_composio(
+                        tmpdir, stdout='{"authenticated": true}', version=installed
+                    )
+                    context = self.session_context(tmpdir, path)
+                    self.assertNotIn(self.NUDGE, context)
 
     def test_prompt_hook_is_surface_aware_for_cached_toolkits(self):
         with tempfile.TemporaryDirectory() as tmpdir:
