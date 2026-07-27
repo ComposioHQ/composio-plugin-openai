@@ -169,8 +169,7 @@ class PluginPackageTests(unittest.TestCase):
 
 class HookBehaviorTests(unittest.TestCase):
     def run_hook(self, script, payload, tmpdir, path=None):
-        # HOME is pinned to the sandbox so the upgrade-nudge cache read never
-        # sees the developer's real ~/.composio/update-check.json.
+        # HOME is pinned so tests never read the real ~/.composio.
         env = dict(os.environ, TMPDIR=tmpdir, HOME=tmpdir)
         if path is not None:
             env["PATH"] = path
@@ -272,8 +271,6 @@ class HookBehaviorTests(unittest.TestCase):
         return json.loads(result.stdout)["hookSpecificOutput"]["additionalContext"]
 
     def test_session_start_nudges_upgrade_for_older_stable_cli(self):
-        # SessionStart compares `composio version` against the CLI's own
-        # ~/.composio/update-check.json release cache (local file, no network).
         with tempfile.TemporaryDirectory() as tmpdir:
             self.write_update_cache(
                 tmpdir,

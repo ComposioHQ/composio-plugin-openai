@@ -33,11 +33,8 @@ else
     cli_status="The local Composio CLI is available and signed in."
   fi
 
-  # Upgrade nudge: read the CLI's own 24h-throttled release cache — a local
-  # file only, never the network. Nudge only for a plain X.Y.Z install that is
-  # strictly older than a plain X.Y.Z latestVersion (the anchored closing quote
-  # rejects prereleases instead of truncating them); anything missing or
-  # malformed degrades to silence.
+  # Upgrade nudge from the CLI's local release cache — never the network.
+  # Stable X.Y.Z versions only; anything missing or malformed stays silent.
   update_cache="${HOME:-}/.composio/update-check.json"
   if [ -f "$update_cache" ]; then
     latest="$(sed -n 's/.*"latestVersion"[[:space:]]*:[[:space:]]*"\([0-9]\{1,\}\.[0-9]\{1,\}\.[0-9]\{1,\}\)".*/\1/p' "$update_cache" 2>/dev/null | head -n 1)"
