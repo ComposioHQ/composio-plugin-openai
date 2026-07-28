@@ -1,0 +1,49 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  tag-release:
+    name: Tag and release on version bump
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          fetch-depth: 2
+
+      - name: Detect plugin version change
+        id: plugin
+        run: |
+          plugin_json="plugins/composio/.codex-plugin/plugin.json"
+          version="$(python3 -c "import json; print(json.load(open('$plugin_json'))['version'])")"
+          previous=""
+          if content="$(git show "HEAD^:$plugin_json" 2>/dev/null)"; then
+            previous="$(printf '%s' "$content" | python3 -c 'import json, sys; print(json.load(sys.stdin)["version"])')"
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [ "$version" != "$previous" ]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Releases created with GITHUB_TOKEN do not trigger `release`-event
+      # workflows. Nothing downstream depends on that event — the tag +
+      # release exist purely as a queryable "latest plugin version" signal.
+      - name: Create tag and GitHub release
+        if: steps.plugin.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.plugin.outputs.version }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Release $TAG already exists; skipping."
+            exit 0
+          fi
+          gh release create "$TAG" --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" --title "$TAG" --generate-notes
