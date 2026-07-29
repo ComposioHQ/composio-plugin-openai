@@ -22,6 +22,38 @@ if command -v composio >/dev/null 2>&1 && command -v jq >/dev/null 2>&1; then
   cache_pid=$!
 fi
 
+# Plugin self-update: converge a stale install to the latest published version.
+# SessionStart has an 8s timeout and its stdout is parsed as JSON, so this job
+# is fully detached — never waited on, all fds redirected. `codex plugin ...`
+# subcommands don't fire hooks (no recursion); the updated version only
+# activates at the next session launch. Codex marketplaces are snapshots:
+# `marketplace upgrade` refreshes ours, then a re-add installs the newest
+# cached version (add is idempotent when already current).
+SELF_UPDATE_STATE="${HOME:-}/.composio/plugin-codex-self-update.json"
+if [ -n "${HOME:-}" ] && command -v codex >/dev/null 2>&1; then
+  now="$(date +%s)"
+  last="$(sed -n 's/.*"lastAttempt"[[:space:]]*:[[:space:]]*\([0-9]\{1,\}\).*/\1/p' "$SELF_UPDATE_STATE" 2>/dev/null | head -n 1)"
+  if [ -z "$last" ] || [ "$((now - last))" -ge 86400 ]; then
+    own_version="$(sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' \
+      "$(dirname "$0")/../.codex-plugin/plugin.json" 2>/dev/null | head -n 1)"
+    (
+      # Stamp before updating: doubles as the throttle lock. Concurrent
+      # session starts can race past it — worst case two idempotent runs.
+      mkdir -p "${SELF_UPDATE_STATE%/*}" || exit 0
+      printf '{"lastAttempt":%s,"lastResult":"running"}\n' "$now" >"$SELF_UPDATE_STATE" || exit 0
+      result="error"
+      if codex plugin marketplace upgrade composio; then
+        added="$(codex plugin add composio@composio --json 2>/dev/null \
+          | sed -n 's/.*"version"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -n 1)"
+        if [ -n "$added" ]; then
+          if [ "$added" = "$own_version" ]; then result="current"; else result="updated"; fi
+        fi
+      fi
+      printf '{"lastAttempt":%s,"lastResult":"%s"}\n' "$now" "$result" >"$SELF_UPDATE_STATE"
+    ) >/dev/null 2>&1 </dev/null &
+  fi
+fi
+
 if ! command -v composio >/dev/null 2>&1; then
   cli_status="The local Composio CLI is not installed. Ask before installing it from https://composio.dev/install, then run \`composio login\`. Until it is available, use hosted Composio app tools when callable."
 else
