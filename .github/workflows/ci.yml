@@ -5,8 +5,6 @@ on:
   push:
     branches:
       - main
-  schedule:
-    - cron: '0 9 * * 1'
 
 permissions:
   contents: read
@@ -30,26 +28,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-      - name: Read canonical skill pin
-        id: provenance
-        run: |
-          commit=$(python -c 'import json; print(json.load(open("plugins/composio/skills/composio/provenance.json"))["source"]["commit"])')
-          echo "commit=$commit" >> "$GITHUB_OUTPUT"
-      - name: Checkout canonical product skill
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          repository: ComposioHQ/composio
-          ref: ${{ github.event_name == 'schedule' && 'next' || steps.provenance.outputs.commit }}
-          path: .upstream/composio
       - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
       - run: bash -n plugins/composio/hooks/session-start.sh plugins/composio/hooks/user-prompt-submit.sh
       - run: python -m unittest discover -s tests -v
-      - name: Check canonical skill contract
-        run: |
-          if [ "${{ github.event_name }}" = "schedule" ]; then
-            python scripts/check-upstream-skill.py .upstream/composio
-          else
-            python scripts/check-upstream-skill.py .upstream/composio --expect-pinned
-          fi

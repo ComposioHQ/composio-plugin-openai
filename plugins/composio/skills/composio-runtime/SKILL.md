@@ -1,9 +1,9 @@
 ---
-name: composio
-description: Route Composio work between the hosted MCP-backed app and the local Composio CLI. Use when a user wants to read or act on external services such as email, calendars, GitHub, Slack, Notion, Linear, Jira, or CRMs; discover an integration or tool; recover a missing connection; combine multiple apps; or automate those actions with local files and scripts.
+name: composio-runtime
+description: Route Composio work between the hosted MCP-backed app and the local Composio CLI, then execute it safely. Use when the OpenAI Composio plugin is available and a user wants to act on connected apps, discover a tool, recover a connection, combine services, or automate app work with local files and scripts.
 ---
 
-# Composio
+# Composio runtime
 
 Choose a surface from the capabilities available in the current task, then keep the workflow on that surface unless the task itself requires the other one.
 

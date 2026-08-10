@@ -1,4 +1,4 @@
-# Hosted Composio app
+# Hosted Composio app runtime
 
 Use this path in ChatGPT web/app, when no usable terminal exists, or when the user explicitly requests the hosted surface. The runtime's tool descriptions and schemas are the source of truth; do not assume fixed tool names.
 

@@ -8,7 +8,7 @@ Composio connects agents to [1,000+ apps](https://composio.dev/toolkits), includ
 - The hosted Composio app provides MCP-backed tools for direct SaaS reads and actions with managed authentication.
 - The local [Composio CLI](https://docs.composio.dev/docs/cli) handles workflows that need local files, scripts, pipelines, or reproducible automation.
 
-The bundled skill chooses between them from the capabilities available in the task. An uncertain write is never retried automatically through the other surface.
+The bundled `composio-runtime` skill chooses between them from the capabilities available in the task. An uncertain write is never retried automatically through the other surface.
 
 In terminal and Codex environments, the skill prefers the CLI. In ChatGPT web/app or another environment without a usable terminal, it uses the hosted app.
 
@@ -37,15 +37,25 @@ curl -fsSL https://composio.dev/install | bash
 composio login
 ```
 
+## Skill and tool discovery
+
+| Installed surface | What becomes discoverable |
+|---|---|
+| This OpenAI/Codex plugin | The hosted Composio app and the bundled `composio-runtime` skill. |
+| Raw Composio MCP connection | Callable tools and schemas only; MCP does not install an agent skill. |
+| Composio CLI agent setup | The separate `composio-cli` skill for current CLI commands and workflows. |
+| Public `ComposioHQ/composio` skill | The separate `composio` product and integration router, when explicitly installed. |
+
+The three skills have different owners and jobs. The plugin does not copy or pin the public skill, and installing the plugin does not install `composio` or `composio-cli`.
+
 ## What's included
 
 | Component | Purpose |
 |---|---|
 | `.app.json` | Points local plugin installs at the team-owned Composio Developer Mode app. |
-| `skills/composio` | Routes work by capability and defines safety boundaries across hosted app and CLI surfaces. |
-| `skills/composio/references/mcp.md` | Covers hosted discovery, connection recovery, execution, and uncertain-write handling. |
-| `skills/composio/references/cli.md` | Covers local discovery, execution, files, scripting, and auth. |
-| `skills/composio/provenance.json` | Pins the canonical product skill and defines the small contract shared by both skills. |
+| `skills/composio-runtime` | Routes work by capability and defines safety boundaries across hosted app and CLI surfaces. |
+| `skills/composio-runtime/references/mcp.md` | Covers hosted discovery, connection recovery, execution, and uncertain-write handling. |
+| `skills/composio-runtime/references/cli.md` | Covers local discovery, execution, files, scripting, and auth. |
 | `hooks/session-start.sh` | Reports local CLI availability and authentication without forcing it over the hosted app. |
 | `hooks/user-prompt-submit.sh` | Adds a short surface-aware nudge for recognized services. |
 
@@ -63,7 +73,7 @@ Run the package tests and validators:
 ```bash
 python3 -m unittest discover -s tests -v
 python3 ~/.codex/skills/.system/plugin-creator/scripts/validate_plugin.py plugins/composio
-python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/composio/skills/composio
+python3 ~/.codex/skills/.system/skill-creator/scripts/quick_validate.py plugins/composio/skills/composio-runtime
 ```
 
 For a local checkout, add this repository as a marketplace and install the plugin:

@@ -1,4 +1,4 @@
-# Local Composio CLI
+# Local Composio CLI runtime
 
 Prefer this path in terminal and Codex environments when the `composio` command is available. It supports direct SaaS work as well as local files, scripting, pipelines, and reproducible automation.
 
