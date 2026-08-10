@@ -83,6 +83,18 @@ class PluginPackageTests(unittest.TestCase):
             {path.name for path in (SKILL / "references").glob("*.md")},
         )
 
+    def test_skill_provenance_defines_complementary_roles(self):
+        provenance = self.load_json(SKILL / "provenance.json")
+        self.assertEqual(1, provenance["version"])
+        self.assertEqual("complementary-overlay", provenance["relationship"])
+        self.assertEqual("ComposioHQ/composio", provenance["source"]["repository"])
+        self.assertEqual("skills/composio/SKILL.md", provenance["source"]["path"])
+        self.assertRegex(provenance["source"]["commit"], r"^[0-9a-f]{40}$")
+        self.assertEqual(
+            {"credential-safety", "runtime-discovery"},
+            {contract["id"] for contract in provenance["sharedContracts"]},
+        )
+
     def test_skill_encodes_the_routing_and_write_contract(self):
         skill_text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         for phrase in (

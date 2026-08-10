@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "relationship": "complementary-overlay",
+  "source": {
+    "repository": "ComposioHQ/composio",
+    "commit": "a3f46e3f73e6fe878140e588bed7bcaf7fa2022d",
+    "path": "skills/composio/SKILL.md",
+    "role": "Canonical product selection, onboarding, SDK integration, and current product guidance"
+  },
+  "localRole": "Hosted-app versus local-CLI runtime routing and write-safety guidance",
+  "sharedContracts": [
+    {
+      "id": "credential-safety",
+      "sourceContains": "Keep credentials out of source control, URLs, logs, chat, and command output.",
+      "localContains": "Never expose credentials, tokens, connection secrets, or raw authentication material."
+    },
+    {
+      "id": "runtime-discovery",
+      "sourceContains": "Never invent toolkit or tool slugs. Discover them at runtime or with the CLI.",
+      "localContains": "For an unknown capability, discover the tool first, inspect its schema, and then execute it."
+    }
+  ]
+}

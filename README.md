@@ -45,6 +45,7 @@ composio login
 | `skills/composio` | Routes work by capability and defines safety boundaries across hosted app and CLI surfaces. |
 | `skills/composio/references/mcp.md` | Covers hosted discovery, connection recovery, execution, and uncertain-write handling. |
 | `skills/composio/references/cli.md` | Covers local discovery, execution, files, scripting, and auth. |
+| `skills/composio/provenance.json` | Pins the canonical product skill and defines the small contract shared by both skills. |
 | `hooks/session-start.sh` | Reports local CLI availability and authentication without forcing it over the hosted app. |
 | `hooks/user-prompt-submit.sh` | Adds a short surface-aware nudge for recognized services. |
 
