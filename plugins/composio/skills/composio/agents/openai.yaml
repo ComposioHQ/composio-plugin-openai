@@ -1,0 +1,4 @@
+interface:
+  display_name: "Composio"
+  short_description: "Connect and act across 1,000+ apps"
+  default_prompt: "Use $composio to connect the right apps and complete this workflow safely."

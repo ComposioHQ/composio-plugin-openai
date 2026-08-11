@@ -11,7 +11,7 @@ import unittest
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 PLUGIN = ROOT / "plugins" / "composio"
 HOOKS = PLUGIN / "hooks"
-SKILL = PLUGIN / "skills" / "composio-runtime"
+SKILL = PLUGIN / "skills" / "composio"
 
 
 class PluginPackageTests(unittest.TestCase):
@@ -65,56 +65,57 @@ class PluginPackageTests(unittest.TestCase):
         self.assertFalse((PLUGIN / ".mcp.json").exists())
         self.assertTrue(SKILL.is_dir())
 
-    def test_bundled_skill_is_surface_aware_and_plugin_owned(self):
+    def test_bundled_skill_is_the_canonical_openai_snapshot(self):
         skill_text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
-        self.assertIn("name: composio-runtime", skill_text)
+        self.assertIn("name: composio", skill_text)
         self.assertNotIn("AUTO-GENERATED", skill_text)
         self.assertNotIn("[TODO:", skill_text)
-        self.assertFalse((PLUGIN / "skills" / "composio" / "SKILL.md").exists())
+        self.assertFalse((PLUGIN / "skills" / "composio-runtime").exists())
         self.assertFalse(
             (PLUGIN / "skills" / "composio-cli" / "SKILL.md").exists()
         )
         self.assertTrue((SKILL / "agents" / "openai.yaml").is_file())
         self.assertIn(
-            "$composio-runtime",
+            "$composio",
             (SKILL / "agents" / "openai.yaml").read_text(encoding="utf-8"),
         )
         self.assertEqual(
-            {"mcp.md", "cli.md"},
+            {"errors.md", "for-you.md", "openai.md", "platform.md"},
             {path.name for path in (SKILL / "references").glob("*.md")},
+        )
+
+        provenance = self.load_json(SKILL / "provenance.json")
+        self.assertEqual("canonical-snapshot-with-openai-overlay", provenance["relationship"])
+        self.assertEqual("ComposioHQ/composio", provenance["source"]["repository"])
+        self.assertEqual("skills/composio", provenance["source"]["path"])
+        self.assertRegex(provenance["source"]["commit"], r"^[0-9a-f]{40}$")
+        self.assertEqual(
+            {"SKILL.md", "references/errors.md", "references/for-you.md", "references/platform.md"},
+            set(provenance["source"]["files"]),
         )
 
     def test_skill_encodes_the_routing_and_write_contract(self):
         skill_text = (SKILL / "SKILL.md").read_text(encoding="utf-8")
         for phrase in (
-            "In a terminal or Codex environment",
-            "prefer the local Composio CLI",
-            "In ChatGPT web/app",
-            "local Composio CLI",
-            "If both surfaces are available",
-            "If neither surface is available",
-            "hosted-only environment",
-            "execute it exactly once",
-            "Never automatically retry an uncertain write through the other surface",
+            "Composio For You",
+            "Composio Platform",
+            "For a generic app outcome",
+            "`composio-cli`",
         ):
             self.assertIn(phrase, skill_text)
 
-        mcp_reference = (SKILL / "references" / "mcp.md").read_text(
+        openai_reference = (SKILL / "references" / "openai.md").read_text(
             encoding="utf-8"
         )
-        cli_reference = (SKILL / "references" / "cli.md").read_text(
-            encoding="utf-8"
-        )
-        self.assertIn("tool-discovery", mcp_reference)
-        self.assertIn("connection-management", mcp_reference)
-        self.assertIn("Do not replay", mcp_reference)
-        self.assertIn("composio execute", cli_reference)
-        self.assertIn("composio search", cli_reference)
-        self.assertIn("composio link", cli_reference)
-        self.assertIn("composio listen", cli_reference)
-        self.assertIn("composio run", cli_reference)
-        self.assertIn("composio dev", cli_reference)
-        self.assertIn("Do not replay", cli_reference)
+        self.assertIn("ChatGPT web, Work, mobile", openai_reference)
+        self.assertIn("terminal or Codex environment", openai_reference)
+        self.assertIn("hosted connection-management", openai_reference)
+        self.assertIn("composio execute", openai_reference)
+        self.assertIn("composio search", openai_reference)
+        self.assertIn("composio link", openai_reference)
+        self.assertIn("composio run", openai_reference)
+        self.assertIn("separate `composio-cli` skill", openai_reference)
+        self.assertIn("Never replay an uncertain write through the other surface", openai_reference)
 
     def test_package_content_scan_is_scoped_to_shipped_files(self):
         package_text = self.package_text()
@@ -122,6 +123,7 @@ class PluginPackageTests(unittest.TestCase):
         self.assertNotIn("env_http_headers", package_text)
         self.assertNotIn("[TODO:", package_text)
         self.assertNotIn("AUTO-GENERATED", package_text)
+        self.assertNotIn("composio-runtime", package_text)
 
     def test_hooks_match_the_surface_aware_contract(self):
         config = self.load_json(HOOKS / "hooks.json")["hooks"]
@@ -162,7 +164,8 @@ class PluginPackageTests(unittest.TestCase):
         self.assertIn("exactly these seven tools", readme)
         self.assertIn("https://connect.composio.dev/mcp", readme)
         self.assertIn("uncertain write", readme)
-        self.assertIn("`composio-runtime`", readme)
+        self.assertIn("canonical `composio` skill", readme)
+        self.assertIn("should not be installed together", readme)
         self.assertIn("MCP does not install an agent skill", readme)
         self.assertNotIn("requires the real `plugin_asdk_app", readme)
         self.assertNotIn("bundles the canonical CLI skill", readme)

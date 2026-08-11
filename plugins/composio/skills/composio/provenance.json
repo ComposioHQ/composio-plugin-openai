@@ -1,0 +1,33 @@
+{
+  "version": 1,
+  "relationship": "canonical-snapshot-with-openai-overlay",
+  "source": {
+    "repository": "ComposioHQ/composio",
+    "commit": "c1fca392de349439e184696d96c1cbd6a170e7b4",
+    "path": "skills/composio",
+    "files": [
+      "SKILL.md",
+      "references/errors.md",
+      "references/for-you.md",
+      "references/platform.md"
+    ]
+  },
+  "overlays": [
+    {
+      "path": "SKILL.md",
+      "purpose": "Separate canonical app workflows from composio-cli and load OpenAI execution guidance"
+    },
+    {
+      "path": "references/for-you.md",
+      "purpose": "Document OpenAI plugin consumption and duplicate-installation policy"
+    },
+    {
+      "path": "references/openai.md",
+      "purpose": "Route safely between hosted app tools and a local CLI on OpenAI surfaces"
+    },
+    {
+      "path": "agents/openai.yaml",
+      "purpose": "Provide OpenAI skill-list metadata"
+    }
+  ]
+}
